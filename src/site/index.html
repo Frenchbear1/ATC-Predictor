@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATC Predictor</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">ATC<span>Predictor</span></div>
+  <nav id="tabs">
+    <button data-view="predict" class="on">Predict</button>
+    <button data-view="script">Flight script</button>
+    <button data-view="list">Transmissions</button>
+    <button data-view="gpt">ChatGPT cleanup</button>
+  </nav>
+  <div class="data">
+    <span id="count" class="muted"></span>
+    <button id="dataBtn">Data ▾</button>
+    <div id="dataMenu" class="menu hidden">
+      <button id="importBtn">Import JSON…</button>
+      <button id="exportBtn">Export JSON</button>
+      <button id="exportAudioBtn">Export JSON + audio</button>
+      <hr>
+      <button id="sampleBtn">Load sample data</button>
+      <button id="clearSampleBtn">Remove sample data</button>
+      <button id="clearBtn" class="danger">Delete everything…</button>
+    </div>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<section id="filters" class="filters">
+  <label>Airport<select id="fAirport"></select></label>
+  <label>Facility<select id="fFacility"></select></label>
+  <label>Phase<select id="fPhase"></select></label>
+  <label>Speaker
+    <select id="fSpeaker">
+      <option value="atc">Controller</option>
+      <option value="pilot">Pilot</option>
+      <option value="">Both</option>
+    </select>
+  </label>
+  <label>Runway<select id="fRunway"></select></label>
+  <label>When
+    <select id="fWhen">
+      <option value="">All time</option>
+      <option value="1">Last 24 h</option>
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+    </select>
+  </label>
+  <label class="grow">Search<input id="fSearch" placeholder="e.g. hold short, ILS, squawk"></label>
+  <label class="check"><input id="fHideJunk" type="checkbox" checked> Hide junk</label>
+</section>
+
+<div id="banner" class="banner hidden"></div>
+
+<main>
+  <section id="view-predict" class="view">
+    <div id="predictHead" class="viewhead"></div>
+    <div id="scenarios"></div>
+  </section>
+
+  <section id="view-script" class="view hidden">
+    <div class="viewhead"><h2>What to expect, phase by phase</h2>
+      <p class="muted">The most common controller calls for each phase at the selected airport, with the pilot readback that usually follows. Pick an airport (and runway) above.</p></div>
+    <div id="script"></div>
+  </section>
+
+  <section id="view-list" class="view hidden">
+    <div class="viewhead row">
+      <h2 id="listTitle">Transmissions</h2>
+      <div class="actions">
+        <button id="selAll">Select all shown</button>
+        <button id="delSel" class="danger">Delete selected</button>
+        <button id="reparse">Re-parse shown</button>
+      </div>
+    </div>
+    <div id="list"></div>
+    <button id="more" class="wide hidden">Show more</button>
+  </section>
+
+  <section id="view-gpt" class="view hidden">
+    <div class="viewhead"><h2>Clean up with ChatGPT</h2>
+      <p class="muted">Copy a batch of transcripts as a prompt, paste it into ChatGPT, then paste its reply back here. It fixes misheard words and numbers, labels who's talking and the phase, and adds a plain-English meaning. Scenarios update automatically.</p></div>
+    <div class="gpt">
+      <div class="card">
+        <h3>1 · Copy</h3>
+        <label class="check"><input id="gOnlyRaw" type="checkbox" checked> Only ones not cleaned yet</label>
+        <label class="check"><input id="gUseFilter" type="checkbox" checked> Use the filters above</label>
+        <label>Batch size <output id="gSizeOut">60</output><input id="gSize" type="range" min="10" max="150" step="10" value="60"></label>
+        <p id="gInfo" class="muted"></p>
+        <button id="gCopy" class="primary">Copy prompt</button>
+        <details><summary>Preview prompt</summary><pre id="gPreview"></pre></details>
+      </div>
+      <div class="card">
+        <h3>2 · Paste ChatGPT's reply</h3>
+        <textarea id="gReply" placeholder='[{"n":1,"text":"...","speaker":"atc","phase":"taxi-out", ...}]'></textarea>
+        <button id="gApply" class="primary">Apply</button>
+        <p id="gResult"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<template id="tplEmpty">
+  <div class="empty">
+    <h2>No transmissions yet</h2>
+    <p>Record some with the extension (open a LiveATC feed → click the extension → <b>Start listening</b>), import a JSON export, or try it with sample data.</p>
+    <button class="primary" data-act="sample">Load sample data</button>
+  </div>
+</template>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

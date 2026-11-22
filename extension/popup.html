@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ATC Predictor</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="logo">ATC<span>Predictor</span></div>
+    <div id="state" class="pill">idle</div>
+  </header>
+
+  <p id="detail" class="detail">Open a LiveATC feed, press play, then Start.</p>
+
+  <div class="grid">
+    <label>Airport (ICAO)<input id="airport" placeholder="KBOS" maxlength="4"></label>
+    <label>Feed<input id="feed" placeholder="kbos_twr"></label>
+    <label>Facility
+      <select id="facility">
+        <option value="mixed" selected>Mixed feed</option>
+        <option value="del">Clearance Delivery</option>
+        <option value="gnd">Ground</option>
+        <option value="twr">Tower</option>
+        <option value="app">Approach/Departure</option>
+        <option value="ctr">Center</option>
+        <option value="atis">ATIS</option>
+        <option value="ctaf">CTAF/UNICOM</option>
+      </select>
+    </label>
+    <label>Speech model
+      <select id="model">
+        <option value="Xenova/whisper-tiny.en">Tiny (fastest, ~40 MB)</option>
+        <option value="Xenova/whisper-base.en" selected>Base (balanced, ~80 MB)</option>
+        <option value="Xenova/whisper-small.en">Small (best, ~250 MB, slower)</option>
+        <option value="custom">Custom Hugging Face ID…</option>
+      </select>
+    </label>
+    <label id="customWrap" class="full hidden">Custom model ID<input id="customModel" placeholder="onnx-community/whisper-base"></label>
+  </div>
+
+  <details>
+    <summary>Advanced</summary>
+    <div class="grid">
+      <label>Squelch sensitivity <output id="sensOut">3</output>
+        <input id="sensitivity" type="range" min="1.5" max="8" step="0.5" value="3"></label>
+      <label>End-of-call gap (ms) <output id="gapOut">700</output>
+        <input id="gapMs" type="range" min="300" max="1500" step="50" value="700"></label>
+      <label class="check full"><input id="keepAudio" type="checkbox" checked> Keep audio clips (for replay while correcting)</label>
+    </div>
+  </details>
+
+  <div class="buttons">
+    <button id="start" class="primary">Start listening</button>
+    <button id="stop">Stop</button>
+  </div>
+
+  <h3>Latest calls</h3>
+  <ul id="recent"><li class="empty">Nothing yet.</li></ul>
+
+  <button id="open" class="wide">Open scenarios →</button>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATC Predictor</title>
+<style>:root {
+  --bg: #0b121b; --panel: #121c28; --panel2: #172434; --line: #23354a; --text: #e7eef6; --dim: #8ea3b8;
+  --accent: #38c172; --atc: #4fa3ff; --pilot: #f6a821; --err: #ef5350; --slot: #1d3a57;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
+button:hover { border-color: #3b5874; }
+button.primary { background: var(--accent); border-color: transparent; color: #04170d; }
+button.danger { color: #ff9c99; }
+button.wide { width: 100%; margin: 12px 0; }
+input, select, textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; }
+.muted { color: var(--dim); }
+.hidden { display: none !important; }
+
+.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 18px; padding: 10px 20px; background: #0d1621ee; backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 800; font-size: 18px; letter-spacing: .4px; }
+.brand span { color: var(--accent); font-weight: 600; margin-left: 3px; }
+nav { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+nav button { background: none; border-color: transparent; color: var(--dim); }
+nav button.on { background: var(--panel2); border-color: var(--line); color: var(--text); }
+.data { position: relative; display: flex; align-items: center; gap: 10px; }
+.menu { position: absolute; right: 0; top: 38px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px; display: flex; flex-direction: column; min-width: 210px; box-shadow: 0 12px 30px #0008; }
+.menu button { background: none; border: none; text-align: left; font-weight: 500; }
+.menu button:hover { background: var(--panel2); }
+.menu hr { border: none; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.filters label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
+.filters label.grow { flex: 1; min-width: 180px; }
+label.check { flex-direction: row !important; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-size: 13px !important; }
+.banner { margin: 12px 20px 0; padding: 8px 12px; border-radius: 8px; background: #3a2f10; color: #ffd98a; border: 1px solid #5c4a17; }
+
+main { padding: 16px 20px 60px; max-width: 1200px; margin: 0 auto; }
+.viewhead h2 { margin: 4px 0; font-size: 18px; }
+.viewhead p { margin: 4px 0 14px; max-width: 760px; }
+.viewhead.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* scenario cards */
+.sc { display: grid; grid-template-columns: 54px 1fr; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
+.sc .rank { text-align: center; }
+.sc .rank b { display: block; font-size: 22px; line-height: 1; }
+.sc .rank small { color: var(--dim); font-size: 11px; }
+.bar { height: 4px; background: var(--line); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.tpl { font-size: 16px; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; line-height: 1.7; }
+.slot { display: inline-block; background: var(--slot); color: #bfe0ff; border-radius: 5px; padding: 0 6px; margin: 0 1px; font-size: 14px; line-height: 1.5; cursor: help; }
+.slot.cs { background: #2a2a40; color: #c9c3ff; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; align-items: center; }
+.chip { font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--panel2); border: 1px solid var(--line); color: var(--dim); }
+.chip.atc { color: var(--atc); border-color: #234c75; }
+.chip.pilot { color: var(--pilot); border-color: #6b4c12; }
+.chip.ph { color: #9fe3bf; border-color: #1f5038; }
+.vals { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12px; color: var(--dim); }
+.vals b { color: var(--text); font-weight: 600; }
+.meaning { margin-top: 8px; padding: 6px 10px; border-left: 3px solid var(--accent); background: #0f2a1d; border-radius: 0 6px 6px 0; font-size: 13px; }
+details.ex { margin-top: 8px; }
+details.ex summary { cursor: pointer; color: var(--dim); font-size: 12px; }
+.exrow { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.exrow:last-child { border-bottom: none; }
+.exrow time { color: var(--dim); font-size: 11px; min-width: 105px; }
+.play { padding: 0 7px; font-size: 11px; }
+.reply { margin-top: 6px; font-size: 13px; color: var(--pilot); }
+.reply span { color: var(--dim); }
+
+/* flight script */
+.phase { margin-bottom: 18px; }
+.phase h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: #9fe3bf; display: flex; gap: 8px; align-items: center; }
+.phase h3::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.cols { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+.mini { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.mini .tpl { font-size: 14px; }
+.mini .pct { color: var(--dim); font-size: 11px; text-align: right; margin-bottom: -2px; }
+.colh { font-size: 11px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+
+/* list */
+.tx { display: grid; grid-template-columns: 22px 120px 1fr auto; gap: 10px; align-items: start; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.tx:hover { background: var(--panel); }
+.tx .when { color: var(--dim); font-size: 12px; }
+.tx .txt { outline: none; border-radius: 5px; padding: 1px 4px; }
+.tx .txt:focus { background: var(--panel2); box-shadow: 0 0 0 1px var(--accent); }
+.tx .raw { color: var(--dim); font-size: 12px; margin-top: 2px; }
+.tx .sel { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.tx select { padding: 2px 4px; font-size: 12px; }
+.tx.junk { opacity: .45; }
+
+/* gpt */
+.gpt { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.card h3 { margin: 0; font-size: 15px; }
+.card label { display: flex; flex-direction: column; gap: 4px; color: var(--dim); font-size: 12px; }
+textarea { min-height: 220px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+pre { white-space: pre-wrap; font-size: 11px; max-height: 300px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
+.ok { color: var(--accent); }
+.bad { color: var(--err); }
+
+.empty { text-align: center; padding: 60px 20px; background: var(--panel); border: 1px dashed var(--line); border-radius: var(--radius); }
+.empty p { color: var(--dim); max-width: 520px; margin: 8px auto 16px; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 8px; z-index: 20; box-shadow: 0 8px 24px #0009; }
+
+@media (max-width: 800px) {
+  .gpt, .cols { grid-template-columns: 1fr; }
+  .tx { grid-template-columns: 22px 1fr; }
+  .tx .when { grid-column: 2; }
+  .tx .sel { grid-column: 2; justify-content: flex-start; }
+  .top { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">ATC<span>Predictor</span></div>
+  <nav id="tabs">
+    <button data-view="predict" class="on">Predict</button>
+    <button data-view="script">Flight script</button>
+    <button data-view="list">Transmissions</button>
+    <button data-view="gpt">ChatGPT cleanup</button>
+  </nav>
+  <div class="data">
+    <span id="count" class="muted"></span>
+    <button id="dataBtn">Data ▾</button>
+    <div id="dataMenu" class="menu hidden">
+      <button id="importBtn">Import JSON…</button>
+      <button id="exportBtn">Export JSON</button>
+      <button id="exportAudioBtn">Export JSON + audio</button>
+      <hr>
+      <button id="sampleBtn">Load sample data</button>
+      <button id="clearSampleBtn">Remove sample data</button>
+      <button id="clearBtn" class="danger">Delete everything…</button>
+    </div>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<section id="filters" class="filters">
+  <label>Airport<select id="fAirport"></select></label>
+  <label>Facility<select id="fFacility"></select></label>
+  <label>Phase<select id="fPhase"></select></label>
+  <label>Speaker
+    <select id="fSpeaker">
+      <option value="atc">Controller</option>
+      <option value="pilot">Pilot</option>
+      <option value="">Both</option>
+    </select>
+  </label>
+  <label>Runway<select id="fRunway"></select></label>
+  <label>When
+    <select id="fWhen">
+      <option value="">All time</option>
+      <option value="1">Last 24 h</option>
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+    </select>
+  </label>
+  <label class="grow">Search<input id="fSearch" placeholder="e.g. hold short, ILS, squawk"></label>
+  <label class="check"><input id="fHideJunk" type="checkbox" checked> Hide junk</label>
+</section>
+
+<div id="banner" class="banner hidden"></div>
+
+<main>
+  <section id="view-predict" class="view">
+    <div id="predictHead" class="viewhead"></div>
+    <div id="scenarios"></div>
+  </section>
+
+  <section id="view-script" class="view hidden">
+    <div class="viewhead"><h2>What to expect, phase by phase</h2>
+      <p class="muted">The most common controller calls for each phase at the selected airport, with the pilot readback that usually follows. Pick an airport (and runway) above.</p></div>
+    <div id="script"></div>
+  </section>
+
+  <section id="view-list" class="view hidden">
+    <div class="viewhead row">
+      <h2 id="listTitle">Transmissions</h2>
+      <div class="actions">
+        <button id="selAll">Select all shown</button>
+        <button id="delSel" class="danger">Delete selected</button>
+        <button id="reparse">Re-parse shown</button>
+      </div>
+    </div>
+    <div id="list"></div>
+    <button id="more" class="wide hidden">Show more</button>
+  </section>
+
+  <section id="view-gpt" class="view hidden">
+    <div class="viewhead"><h2>Clean up with ChatGPT</h2>
+      <p class="muted">Copy a batch of transcripts as a prompt, paste it into ChatGPT, then paste its reply back here. It fixes misheard words and numbers, labels who's talking and the phase, and adds a plain-English meaning. Scenarios update automatically.</p></div>
+    <div class="gpt">
+      <div class="card">
+        <h3>1 · Copy</h3>
+        <label class="check"><input id="gOnlyRaw" type="checkbox" checked> Only ones not cleaned yet</label>
+        <label class="check"><input id="gUseFilter" type="checkbox" checked> Use the filters above</label>
+        <label>Batch size <output id="gSizeOut">60</output><input id="gSize" type="range" min="10" max="150" step="10" value="60"></label>
+        <p id="gInfo" class="muted"></p>
+        <button id="gCopy" class="primary">Copy prompt</button>
+        <details><summary>Preview prompt</summary><pre id="gPreview"></pre></details>
+      </div>
+      <div class="card">
+        <h3>2 · Paste ChatGPT's reply</h3>
+        <textarea id="gReply" placeholder='[{"n":1,"text":"...","speaker":"atc","phase":"taxi-out", ...}]'></textarea>
+        <button id="gApply" class="primary">Apply</button>
+        <p id="gResult"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<template id="tplEmpty">
+  <div class="empty">
+    <h2>No transmissions yet</h2>
+    <p>Record some with the extension (open a LiveATC feed → click the extension → <b>Start listening</b>), import a JSON export, or try it with sample data.</p>
+    <button class="primary" data-act="sample">Load sample data</button>
+  </div>
+</template>
+
+<script type="module">var x=["clearance","taxi-out","takeoff","departure","enroute","arrival","approach","pattern","landing","taxi-in","atis","other"],R={clearance:"Clearance","taxi-out":"Taxi out",takeoff:"Takeoff",departure:"Departure",enroute:"Enroute",arrival:"Arrival",approach:"Approach",pattern:"Pattern",landing:"Landing","taxi-in":"Taxi in",atis:"ATIS",other:"Other"},W=["del","gnd","twr","app","ctr","atis","ctaf","mixed"],z={del:"Clearance Delivery",gnd:"Ground",twr:"Tower",app:"Approach/Departure",ctr:"Center",atis:"ATIS",ctaf:"CTAF/UNICOM",mixed:"Mixed feed"};var k={zero:"0",oh:"0",one:"1",won:"1",two:"2",too:"2",to:null,three:"3",tree:"3",four:"4",for:null,fower:"4",five:"5",fife:"5",six:"6",seven:"7",eight:"8",ate:"8",nine:"9",niner:"9"},M={ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19},C={twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90},b={alpha:"A",alfa:"A",bravo:"B",charlie:"C",delta:"D",echo:"E",foxtrot:"F",golf:"G",hotel:"H",india:"I",juliet:"J",juliett:"J",kilo:"K",lima:"L",mike:"M",november:"N",oscar:"O",papa:"P",quebec:"Q",romeo:"R",sierra:"S",tango:"T",uniform:"U",victor:"V",whiskey:"W",whisky:"W",xray:"X","x-ray":"X",yankee:"Y",zulu:"Z"},H=["american","delta","united","southwest","jetblue","jet blue","spirit","wings","frontier","frontier flight","alaska","hawaiian","skywest","sky west","envoy","republic","brickyard","piedmont","endeavor","endeavour","air shuttle","cactus","speedbird","virgin","air canada","jazz","westjet","lufthansa","air france","klm","aer lingus","shamrock","iberia","emirates","qatari","fedex","ups","atlas","amazon","prime air","kalitta","connie","flexjet","execjet","lifeguard","medevac","mercy","sun country","breeze","moxy","allegiant","gojet","lindbergh","commutair","commuter","jet link","redwood","state","citrus","ameriflight","baron","wheels up","cessna","skyhawk","skylane","piper","cherokee","warrior","archer","arrow","seminole","mooney","bonanza","beech","beechcraft","cirrus","diamond","katana","citation","gulfstream","learjet","king air","challenger","embraer","phenom","pilatus","helicopter","november","army","navy","air force","reach","coast guard","police","eagle"],ue={del:"clearance",gnd:"taxi-out",twr:"takeoff",app:"departure",ctr:"enroute",atis:"atis",ctaf:"pattern"};function fe(t){return t.toLowerCase().replace(/[’']/g,"'").replace(/x-ray/g,"xray").replace(/(\d),(\d{3})/g,"$1$2").replace(/(\d)([a-z])/g,"$1 $2").replace(/[,;!?]+|\.(?=\s|$)/g," | ").replace(/[^a-z0-9.|\s'-]/g," ").replace(/-/g," ").split(/\s+/).filter(Boolean).map(a=>a.replace(/\.$/,""))}function he(t){let a=[],e=0,n=o=>/^\d+$/.test(o)||k[o]!=null,r=o=>/^\d+$/.test(o)?o:k[o];for(;e<t.length;){let o=t[e];if(C[o]!=null){let i=C[o];if(k[t[e+1]]&&k[t[e+1]]!=="0"&&(i+=+k[t[e+1]],e++),e++,C[t[e]]!=null||M[t[e]]!=null){let c=C[t[e]]??M[t[e]];C[t[e]]!=null&&k[t[e+1]]&&k[t[e+1]]!=="0"&&(c+=+k[t[e+1]],e++),e++,a.push(`${i}${String(c).padStart(2,"0")}`);continue}a.push(String(i));continue}if(M[o]!=null){a.push(String(M[o])),e++;continue}if(n(o)||/^\d+\.\d+$/.test(o)){let i="";for(;e<t.length&&(n(t[e])||/^\d+\.\d+$/.test(t[e]));)i+=r(t[e])??t[e],e++;if((t[e]==="point"||t[e]==="decimal")&&n(t[e+1]||"")){e++;let c="";for(;e<t.length&&n(t[e]);)c+=r(t[e]),e++;i=`${i}.${c}`}if(t[e]==="thousand"){let c=(parseFloat(i)||0)*1e3;e++,n(t[e]||"")&&t[e+1]==="hundred"&&(c+=+r(t[e])*100,e+=2),i=String(c)}else t[e]==="hundred"&&(i=String((parseFloat(i)||0)*100),e++);a.push(i);continue}a.push(o),e++}return a}function me(t){let a=[];for(let e=0;e<t.length;e++){let n=t[e],r=a[a.length-1]||"";if(n==="delta"&&/^\d/.test(t[e+1]||"")&&!/^(taxiway|via|at|and|on)$/.test(r)){a.push(n);continue}if(/^\d+$/.test(n)&&/^\d+$/.test(r)&&(r+n).length<=5&&H.includes(a[a.length-2]||"")){a[a.length-1]=r+n;continue}if(b[n]&&/^\d{1,5}[A-Z]*$/.test(r)&&r.length<6&&H.includes(a[a.length-2]||"")){a[a.length-1]=r+b[n];continue}if(b[n]&&/^\d{1,5}$/.test(r)){let o=e,i="";for(;o<t.length&&b[t[o]]&&i.length<2;)i+=b[t[o]],o++;if(o>=t.length||t[o]==="|"){a[a.length-1]=r+i,e=o-1;continue}}if(b[n]){let o=b[n],i=e+1;for(;i<t.length&&(b[t[i]]||/^\d+$/.test(t[i]))&&!(o[0]!=="N"&&b[t[i]]&&/[A-Z]$/.test(o)&&!/\d/.test(o)||(o+=b[t[i]]||t[i],i++,o.length>=6)););a.push(o),e=i-1;continue}a.push(n)}return a}function ge(t=""){let a=fe(t);a=he(a),a=me(a);let e=a.join(" ");return e=e.replace(/\b(\d{1,2}) (left|right|center)\b/g,(n,r,o)=>`${r}${o[0].toUpperCase()}`).replace(/\b(\d{1,2}) ([lrc])\b/g,(n,r,o)=>`${r}${o.toUpperCase()}`).replace(/\bflight level (\d{2,3})\b/g,"FL$1").replace(/\|/g," ").replace(/\s+/g," ").trim(),e}var we=H.map(t=>t.replace(/ /g,"\\s")).join("|"),_=[`\\b(?:${we})\\s(?:[A-Z]{0,2}\\d{1,5}[A-Z]{0,2}|[A-Z0-9]{2,6})\\b`,"\\bN\\d{1,5}[A-Z]{0,2}\\b","(?<!runway |short |heading |of |takeoff |land )\\b\\d{1,5}[A-Z]{1,2}\\b(?=\\s*$)","\\b(?:\\d{3,5}[A-Z]{1,2}|\\d{1,2}[A-Z]{2}|\\d{1,2}[ABD-KM-QS-Z]|[4-9]\\d[A-Z])\\b(?=\\s*$)"].join("|"),be=new RegExp(_),G=new RegExp(_,"g");function ve(t){let a=t.match(be);return a?a[0]:null}function ye(t){let a=t,e=0,n=0,r=[...a.matchAll(G)];if(r.length){r[0].index<=2&&(e+=2);let o=r[r.length-1];o.index+o[0].length>=a.length-1&&o.index>3&&(n+=2.5)}return/\b(with you|request(ing)?|ready (to copy|for (departure|takeoff|taxi))|with (information|the numbers|[A-Z]\b)|inbound|we're|we are|looking for|we have|unable|holding short|on the go|say again|wilco|for the|good day|have a good)\b/.test(a)&&(n+=1.5),/\b(radar contact|wind \d|altimeter|traffic|cleared for|cleared to land|number \d|caution|expect|say (altitude|intentions|heading)|ident|squawk|runway \d+[LRC]? (taxi|cleared|line)|contact (ground|tower|departure|approach|center))\b/.test(a)&&(e+=1),/^(roger|wilco|copy|affirmative|negative|thanks|thank you)\b/.test(a)&&(n+=1),/\b(good day|so long|see ya)\b/.test(a)&&r.length&&r[0].index<=2&&(e+=.5),e===n?"unknown":e>n?"atc":"pilot"}var Se=[["atis",/\b(information [A-Z]\b.*\b(wind|visibility|sky|altimeter)|automated|advise (on initial )?contact you have)\b/,4],["clearance",/\bcleared to (the )?\S+( \S+)? (airport|via)\b/,4],["clearance",/\b(as filed|climb via|departure frequency|dep freq|squawk \d{4}|readback correct|clearance on request|ready to copy|void (time|if)|release|expect (FL\d+|\d+) \d+ (min|minutes))\b/,2.5],["clearance",/\b(after departure|on departure) (fly|turn|maintain|heading)\b/,1.5],["taxi-out",/\b(taxi to runway|runway \S+ taxi via|hold short of runway|cross runway|give way|monitor tower|holding short|ready to taxi|request taxi|taxi via)\b/,3],["taxi-in",/\b(taxi to (the )?(ramp|parking|fbo|gate|hangar|terminal|spot)|exit (left|right|at)|turn (left|right) (at|on) [A-Z]\d?\b.*(contact ground|ground)|clear of (the )?runway|on the ramp)\b/,3],["taxi-in",/\bcontact ground\b/,1],["takeoff",/\b(cleared for (immediate )?takeoff|line up and wait|position and hold|fly runway heading|ready for departure|ready for takeoff|holding short .* ready|rolling|cancel takeoff)\b/,4],["departure",/\b(radar contact|contact departure|climb (and maintain|via)|passing \S+ for|resume own navigation|proceed direct|turn (left|right) heading .* climb|departure)\b/,2],["enroute",/\b(contact \S+ center|center|FL\d{2,3}|flight following|cruise|ride report|chop|request (higher|lower|FL))\b/,2],["arrival",/\b(descend (and maintain|via)|cross \S+ at|expect (the )?(ils|rnav|visual|vor|loc|gps|localizer)|with (information|[A-Z]\b)|have (information|the numbers)|landing \S+|inbound for landing|descending)\b/,2],["approach",/\bcleared (ils|rnav|visual|vor|loc|gps|localizer|straight in)\b/,1.5],["approach",/\b(cleared (ils|rnav|visual|vor|loc|gps|localizer|straight)|maintain \S+ until established|join (the )?localizer|intercept|turn (left|right) heading \d+ (join|intercept|vector)|vectors? (for|to)|field in sight|airport in sight|report (the )?(field|airport)|contact tower|miles from \S+|established)\b/,2.5],["pattern",/\b(touch and go|stop and go|low approach|the option|make (left|right) (closed )?traffic|enter (left|right) (downwind|base)|report (left|right )?(midfield|downwind|base|final)|extend (your )?downwind|closed traffic|remain in the pattern|full stop)\b/,3],["landing",/\b(cleared to land|number (1|2|3|4|one|two|three)|go around|continue|landing runway|wind \d+ at \d+ runway|follow .* traffic|short final|on final)\b/,2.5]];function ke(t,a){let e={};for(let[i,c,l]of Se)c.test(t)&&(e[i]=(e[i]||0)+l);let n=ue[a];if(n&&(e[n]=(e[n]||0)+.75),a==="gnd"&&e["taxi-in"]&&(e["taxi-in"]+=.5),a==="twr"&&(e.landing=(e.landing||0)+.3),a==="app"&&(e.arrival=(e.arrival||0)+.5),a==="atis")return"atis";let r="other",o=.9;for(let[i,c]of Object.entries(e))c>o&&(r=i,o=c);return r}var xe=[["IFR clearance",/\bcleared to \S+.*\b(via|as filed|climb|squawk)\b/],["Squawk",/\bsquawk \d{4}\b/],["Takeoff clearance",/\bcleared for (immediate )?takeoff\b/],["Landing clearance",/\bcleared to land\b|\bcleared (for )?the option\b|\bcleared touch and go\b/],["Line up and wait",/\bline up and wait|position and hold\b/],["Taxi",/\btaxi (to|via)\b/],["Hold short",/\bhold(ing)? short\b/],["Cross runway",/\bcross runway\b/],["Approach clearance",/\bcleared (ils|rnav|visual|vor|loc|gps|localizer|straight)/],["Vector",/\b(turn (left|right) )?heading \d{3}\b|\bfly heading\b/],["Altitude",/\b(climb|descend)( and maintain)?\b|\bmaintain \d{3,5}\b|\bFL\d+\b/],["Speed",/\b(speed \d+|reduce speed|increase speed|maintain \d+ knots)\b/],["Frequency change",/\bcontact \S+.*\d{3}\.\d+|\bmonitor \S+|\bfrequency change approved\b/],["Traffic",/\btraffic (\d|is|alert|no factor|in sight|holding|\S+ o'?clock)|\b\d{1,2} o'?clock\b/],["Pattern",/\b(make (left|right) traffic|downwind|base|midfield|extend|closed traffic)\b/],["Radar contact",/\bradar contact\b/],["Check-in",/\bwith you\b|\bwith (information|[A-Z]\b)|\bchecking in\b/],["Request",/\brequest(ing)?\b/],["Go around",/\bgo around\b/],["Weather/altimeter",/\b(altimeter|wind \d|visibility|ceiling)\b/],["Readback/ack",/^(roger|wilco|copy|affirmative|negative)\b/]];function $e(t){return xe.filter(([,a])=>a.test(t)).map(([a])=>a).slice(0,4)}var Le=[["FREQ",/\b(1[1-3]\d\.\d{1,3})\b/g,1],["SQUAWK",/\b(squawk) (\d{4})\b/g,2],["ALTIM",/\b(altimeter) (\d{4}|\d{2}\.\d{2})\b/g,2],["WIND",/\b(wind) (\d{3} at \d{1,2}( gust(ing|s)? \d{1,2})?|calm|variable at \d+)\b/g,2],["RWY",/\b(runway) (\d{1,2}[LRC]?)\b/g,2],["RWY",/\b(hold(?:ing)? short(?: of)?|cross|crossing) (\d{1,2}[LRC]?)\b/g,2],["HDG",/\b(heading) (\d{3})\b/g,2],["HDG",/\b(left|right) (\d{3})\b/g,2],["RWY",/\b(takeoff|land|ils|rnav|visual|approach|wait|traffic|departure|arrival|via the \S+ \S+|expect) (\d{1,2}[LRC]?)\b(?!\d)/g,2],["FL",/\b(FL\d{2,3})\b/g,1],["ALT",/\b(maintain|climb|descend|climbing|descending|at|to|cross \S+ at|expect|leaving|passing|through) (\d{1,2}000|\d{1,2}[1-9]00|\d{3,5})\b(?! knots)/g,2],["SPD",/\b(speed|maintain) (\d{3}) knots\b|\bspeed (\d{3})\b/g,0],["TWY",/\b(via|taxiway|at|on|left on|right on|left at|right at) ((?:[A-Z]\d{0,2}\b ?){1,6})(?=\b)/g,2],["INFO",/\b(information|with) ([A-Z])\b(?!\d)/g,2],["DIST",/\b(\d{1,2}) (miles?|mile)\b/g,1],["CLOCK",/\b(\d{1,2}) o'?clock\b/g,1]];function Ae(t){let a=` ${t} `,e={},n=(r,o)=>{(e[r]||=[]).push(o.trim())};a=a.replace(G,r=>(n("CALLSIGN",r)," {CALLSIGN} "));for(let[r,o,i]of Le)a=a.replace(o,(...c)=>{let l=c[0];if(r==="SPD"){let w=c[2]||c[3];return n(r,w),l.replace(w,`{${r}}`)}let d=c[i];if(d==null||r==="ALT"&&/^\d{3}$/.test(d)&&!/maintain|climb|descend/.test(c[1]))return l;let p=d.trim();return r==="TWY"&&!/[A-Z]/.test(p)?l:(n(r,p),i===0?`{${r}}`:l.replace(new RegExp(`${U(p)}(?![\\s\\S]*${U(p)})`),`{${r}}`))});return a=a.replace(/\b\d+(\.\d+)?\b/g,r=>(n("N",r),"{N}")),a=a.replace(/\s+/g," ").trim(),{template:a,slots:e}}function U(t){return t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}function $(t,{facility:a="mixed"}={}){let e=ge(t),{template:n,slots:r}=Ae(e);return{norm:e,template:n,slots:r,callsign:ve(e),speaker:ye(e),phase:ke(e,a),intents:$e(e)}}var Te="atc-predictor";var F;function je(){return F||(F=new Promise((t,a)=>{let e=indexedDB.open(Te,1);e.onupgradeneeded=()=>{let n=e.result;if(!n.objectStoreNames.contains("tx")){let r=n.createObjectStore("tx",{keyPath:"id"});r.createIndex("ts","ts"),r.createIndex("airport","airport")}n.objectStoreNames.contains("audio")||n.createObjectStore("audio")},e.onsuccess=()=>t(e.result),e.onerror=()=>a(e.error)}),F)}function v(t,a,e){return je().then(n=>new Promise((r,o)=>{let i=n.transaction(t,a),c=i.objectStore(t),l;Promise.resolve(e(c)).then(d=>{l=d}),i.oncomplete=()=>r(l),i.onerror=()=>o(i.error),i.onabort=()=>o(i.error)}))}var q=t=>new Promise((a,e)=>{t.onsuccess=()=>a(t.result),t.onerror=()=>e(t.error)}),h={async all(){return v("tx","readonly",t=>q(t.getAll()))},async put(t){return v("tx","readwrite",a=>{a.put(t)})},async putMany(t){return v("tx","readwrite",a=>{t.forEach(e=>a.put(e))})},async remove(t){await v("tx","readwrite",a=>{t.forEach(e=>a.delete(e))}),await v("audio","readwrite",a=>{t.forEach(e=>a.delete(e))})},async clear(){await v("tx","readwrite",t=>{t.clear()}),await v("audio","readwrite",t=>{t.clear()})},async putAudio(t,a){return v("audio","readwrite",e=>{e.put(a,t)})},async getAudio(t){return v("audio","readonly",a=>q(a.get(t)))},async count(){return v("tx","readonly",t=>q(t.count()))}};function Z(){return`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`}var Re=/\b(uh+|um+|ah+|the|and|a|good day|good morning|good afternoon|good evening|thanks|thank you|please|sir|ma'am)\b/g;function Ee(t){let a=(t.template||"").toLowerCase().replace(Re," ").replace(/\s+/g," ").trim();return`${t.speaker}|${t.phase}|${a}`}function J(t,a=3){let e=new Map;for(let r of t)e.set(r,(e.get(r)||0)+1);let n=t.length;return[...e.entries()].sort((r,o)=>o[1]-r[1]).slice(0,a).map(([r,o])=>({value:r,count:o,pct:o/n}))}function I(t){let a=new Map;for(let n of t){let r=Ee(n),o=a.get(r);o||(o={key:r,speaker:n.speaker,phase:n.phase,items:[],templates:new Map,slotVals:{},intents:new Map},a.set(r,o)),o.items.push(n),o.templates.set(n.template,(o.templates.get(n.template)||0)+1);for(let[i,c]of Object.entries(n.slots||{})){if(i==="CALLSIGN"||i==="N")continue;let l=o.slotVals[i]||=[];c.forEach((d,p)=>(l[p]||=[]).push(d))}for(let i of n.intents||[])o.intents.set(i,(o.intents.get(i)||0)+1)}let e=t.length||1;return[...a.values()].map(n=>{let r=[...n.templates.entries()].sort((d,p)=>p[1]-d[1])[0][0],o={},i={};for(let[d,p]of Object.entries(n.slotVals))o[d]=J(p.flat()),i[d]=p.map(w=>J(w));let c=n.items.sort((d,p)=>p.ts-d.ts),l=c.map(d=>d.meaning).filter(Boolean);return{key:n.key,speaker:n.speaker,phase:n.phase,template:r,count:c.length,share:c.length/e,slots:o,slotsPos:i,intents:[...n.intents.entries()].sort((d,p)=>p[1]-d[1]).map(([d])=>d).slice(0,3),examples:c.slice(0,6),meaning:l[0]||"",airports:[...new Set(c.map(d=>d.airport))],lastTs:c[0]?.ts||0}}).sort((n,r)=>r.count-n.count||r.lastTs-n.lastTs)}function Y(t){let a=new Map;for(let n of t){let r=`${n.airport}|${n.feed}`;(a.get(r)||a.set(r,[]).get(r)).push(n)}let e=new Map;for(let n of a.values()){n.sort((r,o)=>r.ts-o.ts);for(let r=0;r<n.length-1;r++){let o=n[r],i=n[r+1];o.speaker==="atc"&&i.speaker==="pilot"&&i.ts-o.ts<2e4&&e.set(o.id,i)}}return e}function K(t,{perPhase:a=3}={}){return x.filter(n=>n!=="other").map(n=>{let r=t.filter(c=>c.phase===n),o=I(r.filter(c=>c.speaker==="atc")).slice(0,a),i=I(r.filter(c=>c.speaker==="pilot")).slice(0,a);return{phase:n,total:r.length,atc:o,pilot:i}}).filter(n=>n.total>0)}function N(t){let a=[...t].sort((n,r)=>n.ts-r.ts),e=new Map;return a.map(n=>{let r=`${n.airport}|${n.feed}`,o=e.get(r),i=n;return!n.cleaned&&o&&n.ts-o.ts<2e4&&n.speaker!=="atc"&&(n.phase==="other"||n.speaker==="unknown")&&(i={...n,phase:n.phase==="other"?o.phase:n.phase,speaker:n.speaker==="unknown"?"pilot":n.speaker,inferred:!0}),i.speaker==="atc"&&e.set(r,i),i})}function B(t){let a=[...new Set(t.map(r=>r.airport).filter(Boolean))].join(", ")||"unknown",e=t.map((r,o)=>`${o+1} | ${r.airport||"?"} ${r.facility||""} | ${(r.corrected||r.text||r.raw||"").replace(/\s+/g," ")}`);return{prompt:`You are cleaning up automatic speech-to-text transcripts of US air traffic control radio (FAA phraseology, 7110.65 / AIM style).
+Airports: ${a}. Each line is one radio transmission from the facility shown.
+
+For every line:
+1. Fix speech-recognition mistakes: callsigns, airline telephony, N-numbers, numbers, phonetic letters, taxiway names, fixes, SIDs/STARs, frequencies, runway numbers. Use what makes sense for that airport.
+2. Write it the way it would be printed in a training guide: numbers as digits (runway 27L, heading 270, climb and maintain 3000, 124.75, squawk 4521, altimeter 29.92), taxiways and letters as capitals (taxi via A, B3), airline names normally (JetBlue 1234, N123AB).
+3. Don't invent words that aren't implied by the transcript. If a part is unreadable, keep it as close as you can and lower confidence.
+4. Decide who is talking: "atc" (controller) or "pilot".
+5. Pick the phase of flight, one of: ${x.join(", ")}.
+6. Give a short plain-English meaning a student pilot would understand.
+7. Set "junk": true if it isn't a real ATC/pilot transmission (music, noise, hallucinated filler).
+
+Reply with ONLY a JSON array (no prose, no code fence), one object per line, same numbers:
+[{"n":1,"text":"...","speaker":"atc","phase":"taxi-out","meaning":"...","confidence":0.9,"junk":false}]
+
+Lines (n | airport facility | transcript):
+${e.join(`
+`)}`,map:t.map(r=>r.id)}}function Ce(t){let a=t.trim().replace(/^```(?:json)?/i,"").replace(/```$/i,"").trim(),e=a.indexOf("["),n=a.lastIndexOf("]");if(e!==-1&&n>e)try{return JSON.parse(a.slice(e,n+1))}catch{}let r=[];for(let o of a.split(`
+`)){let i=o.trim().replace(/,$/,"");if(i.startsWith("{"))try{r.push(JSON.parse(i))}catch{}}if(!r.length)throw new Error("Couldn't find a JSON array in what you pasted. Make sure you copied ChatGPT's whole reply.");return r}function V(t,a,e){let n=Ce(e),r=new Map(t.map(l=>[l.id,l])),o=[],i=0,c=[];for(let l of n){let d=+(l.n??l.id??l.line),p=a[d-1],w=p&&r.get(p);if(!w){c.push(d);continue}let O=(l.text||l.corrected||"").trim(),g={...w};O&&(g.corrected=O,Object.assign(g,$(O,{facility:w.facility})),g.text=O),(l.speaker==="atc"||l.speaker==="pilot")&&(g.speaker=l.speaker),x.includes(l.phase)&&(g.phase=l.phase),l.meaning&&(g.meaning=String(l.meaning)),typeof l.confidence=="number"&&(g.confidence=l.confidence),g.junk=!!l.junk,g.junk&&i++,g.cleaned=!0,g.cleanedAt=Date.now(),o.push(g)}return{updated:o,junk:i,missing:c}}var Q=[["Cessna one two three alpha bravo","three alpha bravo"],["Skyhawk four seven two charlie papa","two charlie papa"],["Cherokee eight one lima","eight one lima"],["JetBlue fourteen twenty two","JetBlue fourteen twenty two"],["Delta twenty seven ninety","Delta twenty seven ninety"],["Southwest four fifty five","Southwest four fifty five"],["Archer niner five two sierra","five two sierra"]],X=(t,a)=>t[a%t.length],Ie=[["del","{cs}, cleared to the Bradley airport via the Sample two departure, then as filed. Climb and maintain three thousand, expect five thousand one zero minutes after departure. Departure frequency one two four point seven five, squawk four five two one.","Cleared to Bradley via the Sample two, three thousand, expect five thousand in ten, one two four point seven five, squawk four five two one, {sh}"],["del","{cs}, readback correct, contact ground one two one point niner when ready to taxi.","Ground point niner, {sh}"],["gnd","{cs}, runway two seven, taxi via alpha, hold short of runway two seven.","Runway two seven via alpha, hold short, {sh}"],["gnd","{cs}, runway two seven, taxi via alpha bravo, hold short of runway three three.","Two seven via alpha bravo, hold short three three, {sh}"],["gnd","{cs}, cross runway three three, continue via alpha, monitor tower one one niner point one.","Cross three three, alpha, monitor tower, {sh}"],["twr","{cs}, runway two seven, line up and wait.","Line up and wait two seven, {sh}"],["twr","{cs}, wind two eight zero at one two, runway two seven, cleared for takeoff.","Cleared for takeoff two seven, {sh}"],["twr","{cs}, fly runway heading, runway two seven, cleared for takeoff.","Runway heading, cleared for takeoff, {sh}"],["twr","{cs}, contact departure, good day.","Departure, {sh}, good day"],["app","{cs}, Sample departure, radar contact, climb and maintain five thousand.","Climb and maintain five thousand, {sh}"],["app","{cs}, turn left heading two one zero, climb and maintain five thousand.","Left two one zero, five thousand, {sh}"],["ctr","{cs}, contact Boston Center one three two point four five.","One three two point four five, {sh}"],["app","{cs}, descend and maintain three thousand, expect the ILS runway two seven approach.","Down to three thousand, expect ILS two seven, {sh}"],["app","{cs}, turn right heading two four zero, maintain two thousand five hundred until established on the localizer, cleared ILS runway two seven approach.","Right two four zero, two thousand five hundred until established, cleared ILS two seven, {sh}"],["app","{cs}, contact tower one one niner point one.","Tower one one niner point one, {sh}"],["twr","{cs}, runway two seven, cleared to land.","Cleared to land two seven, {sh}"],["twr","{cs}, wind two seven zero at eight, runway two seven, cleared to land.","Cleared to land runway two seven, {sh}"],["twr","{cs}, make left traffic runway two seven, report midfield downwind.","Left traffic two seven, report midfield, {sh}"],["twr","{cs}, number two, follow the Skyhawk on left base, runway two seven, cleared touch and go.","Number two, traffic in sight, cleared touch and go, {sh}"],["twr","{cs}, turn left at bravo, contact ground point niner.","Left at bravo, ground point niner, {sh}"],["gnd","{cs}, taxi to the ramp via bravo alpha.","Ramp via bravo alpha, {sh}"]],Ne=[["gnd","Sample Ground, {cs}, at the FBO with information kilo, ready to taxi, VFR to the south."],["twr","Sample Tower, {cs}, holding short runway two seven, ready for departure."],["app","Sample Approach, {cs}, with you at four thousand with information kilo."],["twr","Sample Tower, {cs}, one zero miles south, inbound for landing with information kilo."]],Pe=[["gnd","Jet blue 14 22 runway to 7 taxi via alpha holds short of runway 27"],["twr","Delta 27 90 wins 280 at 12 runway 2 7 clear for take off"],["app","Southwest 455 descended maintain 3000 expect the eye less runway 27 approach"]];function ee(){let t=[],a=Date.now()-108e6,e=(r,o,i)=>{a+=15e3+i%7*9e3;let c=$(o,{facility:r});t.push({id:Z(),ts:a,airport:"KSMP",feed:`ksmp_${r}`,facility:r,source:"sample",raw:o,text:o,durationSec:3,...c})},n=0;for(let r=0;r<3;r++)Ie.forEach(([o,i,c],l)=>{if((l+r)%4===3&&r>0)return;let[d,p]=X(Q,l+r*3);e(o,i.replace("{cs}",d),n++),e(o,c.replace("{sh}",p),n++)}),Ne.forEach(([o,i],c)=>e(o,i.replace("{cs}",X(Q,c+r)[0]),n++));return Pe.forEach(([r,o])=>e(r,o,n++)),t}var s=t=>document.getElementById(t),u=t=>String(t??"").replace(/[&<>"']/g,a=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[a]),D=t=>`${Math.round(t*100)}%`,ne=t=>new Date(t).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}),Oe=typeof chrome<"u"&&!!chrome.runtime?.id,f=[],A=[],E="predict",P=150,L=new Set,re="atcp-filters";async function S(){f=await h.all(),A=N(f),ie(),j()}function m(t){let a=document.createElement("div");a.className="toast",a.textContent=t,document.body.append(a),setTimeout(()=>a.remove(),2600)}function y(t,a,e){return`<option value="${u(t)}"${t===e?" selected":""}>${u(a)}</option>`}function ie(){let t=JSON.parse(localStorage.getItem(re)||"{}"),a=l=>s(l).dataset.ready?s(l).value:t[l],e=[...new Set(f.map(l=>l.airport).filter(Boolean))].sort(),n=a("fAirport");s("fAirport").innerHTML=y("","All airports",n)+e.map(l=>y(l,l,n)).join("");let r=a("fFacility");s("fFacility").innerHTML=y("","All",r)+W.map(l=>y(l,z[l],r)).join("");let o=a("fPhase");s("fPhase").innerHTML=y("","All phases",o)+x.map(l=>y(l,R[l],o)).join("");let i=new Set;for(let l of f)if(!n||l.airport===n)for(let d of l.slots?.RWY||[])i.add(d);let c=a("fRunway");s("fRunway").innerHTML=y("","Any",c)+[...i].sort((l,d)=>parseInt(l)-parseInt(d)).map(l=>y(l,l,c)).join("");for(let l of["fSpeaker","fWhen"])!s(l).dataset.ready&&t[l]!=null&&(s(l).value=t[l]);!s("fSearch").dataset.ready&&t.fSearch&&(s("fSearch").value=t.fSearch),["fAirport","fFacility","fPhase","fRunway","fSpeaker","fWhen","fSearch"].forEach(l=>{s(l).dataset.ready="1"}),s("count").textContent=`${f.length} calls`}function oe(){let t={};for(let a of["fAirport","fFacility","fPhase","fRunway","fSpeaker","fWhen","fSearch"])t[a]=s(a).value;localStorage.setItem(re,JSON.stringify(t))}function T({ignoreSpeaker:t=!1,ignorePhase:a=!1}={}){let e=s("fAirport").value,n=s("fFacility").value,r=s("fPhase").value,o=s("fSpeaker").value,i=s("fRunway").value,c=+s("fWhen").value,l=s("fSearch").value.trim().toLowerCase(),d=c?Date.now()-c*864e5:0;return A.filter(p=>(!e||p.airport===e)&&(!n||p.facility===n)&&(a||!r||p.phase===r)&&(t||!o||p.speaker===o)&&(!i||(p.slots?.RWY||[]).includes(i))&&(!d||p.ts>=d)&&(!s("fHideJunk").checked||!p.junk)&&(!l||`${p.text} ${p.norm} ${p.raw} ${p.meaning||""}`.toLowerCase().includes(l)))}function se(t,a,e,n){let r={};return u(t).replace(/\{([A-Z]+)\}/g,(o,i)=>{if(i==="CALLSIGN")return'<span class="slot cs" title="Callsign">callsign</span>';let c=r[i]=(r[i]??-1)+1,l=n?.[i]?.[c]||a?.[i]||[],d=l[0]?.value??null;!d&&e?.slots?.[i]&&(d=e.slots[i][c]??e.slots[i][0]);let p=l.map(w=>`${w.value} (${D(w.pct)})`).join(", ")||i;return`<span class="slot" title="${u(i)}: ${u(p)}">${u(d??i.toLowerCase())}</span>`})}var te={RWY:"Runway",TWY:"Taxiways",ALT:"Altitude",FL:"Flight level",HDG:"Heading",FREQ:"Frequency",SQUAWK:"Squawk",ALTIM:"Altimeter",WIND:"Wind",SPD:"Speed",INFO:"ATIS",DIST:"Miles",CLOCK:"O'clock"};function Me(t){return Object.entries(t).filter(([a])=>te[a]).map(([a,e])=>`<span>${te[a]}: ${e.map(n=>`<b>${u(n.value)}</b> ${D(n.pct)}`).join(" \xB7 ")}</span>`).join("")}function Fe(t,a){return t.map(e=>{let n=a?.get(e.id);return`<div class="exrow"><time>${ne(e.ts)}</time>${e.hasAudio?`<button class="play" data-play="${e.id}">\u25B6</button>`:""}
+      <div>${u(e.text)} <span class="muted">\xB7 ${u(e.airport)} ${u(z[e.facility]||"")}${e.cleaned?" \xB7 cleaned":""}${e.source==="sample"?" \xB7 sample":""}</span>
+      ${n?`<div class="reply"><span>Reply:</span> ${u(n.text)}</div>`:""}</div></div>`}).join("")}function De(){let t=T(),a=I(t),e=Y(A),n=s("fAirport").value||"all airports",r=s("fPhase").value?R[s("fPhase").value]:"every phase",o={atc:"controller calls",pilot:"pilot calls","":"calls"}[s("fSpeaker").value];if(s("predictHead").innerHTML=`<h2>Most likely ${o} \xB7 ${u(n)} \xB7 ${u(r)}</h2>
+    <p class="muted">${t.length} transmissions grouped into ${a.length} scenarios. Percentages are share of the filtered calls. Hover a blue value to see the alternatives.</p>`,!f.length){s("scenarios").innerHTML="",s("scenarios").append(s("tplEmpty").content.cloneNode(!0));return}if(!a.length){s("scenarios").innerHTML='<div class="empty"><p>Nothing matches these filters.</p></div>';return}s("scenarios").innerHTML=a.slice(0,60).map((i,c)=>{let l=i.speaker==="atc"?He(i,e):null;return`<article class="sc">
+      <div class="rank"><b>${c+1}</b><small>${i.count}\xD7 \xB7 ${D(i.share)}</small><div class="bar"><i style="width:${Math.max(4,i.share*100)}%"></i></div></div>
+      <div>
+        <div class="tpl">${se(i.template,i.slots,i.examples[0],i.slotsPos)}</div>
+        <div class="meta"><span class="chip ${i.speaker}">${i.speaker==="atc"?"Controller":i.speaker==="pilot"?"Pilot":"Unknown"}</span>
+          <span class="chip ph">${u(R[i.phase]||i.phase)}</span>
+          ${i.intents.map(d=>`<span class="chip">${u(d)}</span>`).join("")}
+          ${i.airports.length>1?`<span class="chip">${i.airports.length} airports</span>`:""}</div>
+        ${Object.keys(i.slots).length?`<div class="vals">${Me(i.slots)}</div>`:""}
+        ${i.meaning?`<div class="meaning">${u(i.meaning)}</div>`:""}
+        ${l?`<div class="reply"><span>Typical readback:</span> ${u(l)}</div>`:""}
+        <details class="ex"><summary>Real examples (${Math.min(i.count,6)} of ${i.count})</summary>${Fe(i.examples,e)}</details>
+      </div></article>`}).join("")}function He(t,a){let e=t.examples.map(r=>a.get(r.id)).filter(Boolean);return e.length&&I(e)[0]?.examples[0]?.text||null}function ze(){let t=T({ignoreSpeaker:!0,ignorePhase:!0});if(!f.length){s("script").innerHTML="",s("script").append(s("tplEmpty").content.cloneNode(!0));return}let a=K(t);if(!a.length){s("script").innerHTML='<div class="empty"><p>Nothing matches these filters.</p></div>';return}let e=n=>`<div class="mini"><div class="pct">${n.count}\xD7 \xB7 ${D(n.share)}</div><div class="tpl">${se(n.template,n.slots,n.examples[0],n.slotsPos)}</div>
+    ${n.meaning?`<div class="muted" style="font-size:12px;margin-top:3px">${u(n.meaning)}</div>`:""}</div>`;s("script").innerHTML=a.map(n=>`<div class="phase"><h3>${u(R[n.phase])} <span class="muted">${n.total} calls</span></h3>
+    <div class="cols"><div><div class="colh">Controller says</div>${n.atc.map(e).join("")||'<p class="muted">\u2014</p>'}</div>
+    <div><div class="colh">Pilot says</div>${n.pilot.map(e).join("")||'<p class="muted">\u2014</p>'}</div></div></div>`).join("")}function qe(){let t=T({ignoreSpeaker:!s("fSpeaker").value}).sort((e,n)=>n.ts-e.ts);if(s("listTitle").textContent=`Transmissions (${t.length})`,!f.length){s("list").innerHTML="",s("list").append(s("tplEmpty").content.cloneNode(!0)),s("more").classList.add("hidden");return}let a=(e,n,r)=>`<select data-field="${e}">${r.map(([o,i])=>y(o,i,n)).join("")}</select>`;s("list").innerHTML=t.slice(0,P).map(e=>`<div class="tx${e.junk?" junk":""}" data-id="${e.id}">
+    <input type="checkbox" data-sel ${L.has(e.id)?"checked":""}>
+    <div class="when">${ne(e.ts)}<br>${u(e.airport)} \xB7 ${u(e.facility)}</div>
+    <div><div class="txt" contenteditable="plaintext-only" spellcheck="false" data-edit>${u(e.text)}</div>
+      ${e.raw&&e.raw!==e.text?`<div class="raw">heard: ${u(e.raw)}</div>`:""}
+      ${e.meaning?`<div class="raw">means: ${u(e.meaning)}</div>`:""}</div>
+    <div class="sel">${e.hasAudio?`<button class="play" data-play="${e.id}">\u25B6</button>`:""}
+      ${a("speaker",e.speaker,[["atc","ATC"],["pilot","Pilot"],["unknown","?"]])}
+      ${a("phase",e.phase,x.map(n=>[n,R[n]]))}
+      <button class="play" data-junk title="Toggle junk">${e.junk?"unjunk":"junk"}</button></div>
+  </div>`).join(""),s("more").classList.toggle("hidden",t.length<=P)}function le(){let t=s("gUseFilter").checked?T({ignoreSpeaker:!0}):[...A];return s("gOnlyRaw").checked&&(t=t.filter(a=>!a.cleaned)),t=t.filter(a=>!a.junk).sort((a,e)=>a.ts-e.ts).slice(0,+s("gSize").value),t}function ce(){s("gSizeOut").textContent=s("gSize").value;let t=le(),a=(s("gUseFilter").checked?T({ignoreSpeaker:!0}):A).filter(e=>!e.cleaned&&!e.junk).length;s("gInfo").textContent=t.length?`${t.length} transmissions in this batch \xB7 ${a} not cleaned yet`:"Nothing to send with these settings.",s("gPreview").textContent=t.length?B(t).prompt:""}function j(){let t=f.some(a=>a.source==="sample");s("banner").classList.toggle("hidden",!t),s("banner").textContent=t?"Sample data is loaded (airport KSMP is made up). Remove it from Data \u25BE when you have real recordings.":"",s("filters").classList.toggle("hidden",!1),E==="predict"&&De(),E==="script"&&ze(),E==="list"&&qe(),E==="gpt"&&ce()}s("tabs").addEventListener("click",t=>{let a=t.target.closest("button[data-view]");a&&(E=a.dataset.view,document.querySelectorAll("#tabs button").forEach(e=>e.classList.toggle("on",e===a)),document.querySelectorAll(".view").forEach(e=>e.classList.toggle("hidden",e.id!==`view-${E}`)),j())});for(let t of["fAirport","fFacility","fPhase","fRunway","fSpeaker","fWhen","fHideJunk"])s(t).addEventListener("change",()=>{t==="fAirport"&&(s("fRunway").value="",ie()),oe(),P=150,j()});var ae;s("fSearch").addEventListener("input",()=>{clearTimeout(ae),ae=setTimeout(()=>{oe(),j()},200)});document.addEventListener("click",async t=>{let a=t.target.closest("[data-play]");if(a){let n=await h.getAudio(a.dataset.play);if(!n)return m("No audio saved for this one.");let r=URL.createObjectURL(n),o=new Audio(r);o.play(),o.onended=()=>URL.revokeObjectURL(r);return}if(t.target.closest('[data-act="sample"]'))return pe();let e=t.target.closest("[data-junk]");if(e){let n=e.closest(".tx").dataset.id,r=f.find(o=>o.id===n);r.junk=!r.junk,await h.put(r),A=N(f),j()}t.target.closest(".data")||s("dataMenu").classList.add("hidden")});s("list").addEventListener("change",async t=>{let a=t.target.closest(".tx");if(!a)return;let e=a.dataset.id;if(t.target.matches("[data-sel]")){t.target.checked?L.add(e):L.delete(e);return}let n=t.target.dataset.field;if(n){let r=f.find(o=>o.id===e);r[n]=t.target.value,r.manual=!0,r.cleaned=!0,await h.put(r),A=N(f)}});s("list").addEventListener("focusout",async t=>{if(!t.target.matches("[data-edit]"))return;let a=t.target.closest(".tx").dataset.id,e=f.find(i=>i.id===a),n=t.target.textContent.trim();if(!n||n===e.text)return;let r={speaker:e.speaker,phase:e.phase},o=e.manual||e.cleaned;Object.assign(e,$(n,{facility:e.facility}),{text:n,corrected:n,cleaned:!0,manual:!0}),o&&Object.assign(e,r),await h.put(e),A=N(f),m("Saved")});s("list").addEventListener("keydown",t=>{t.target.matches("[data-edit]")&&t.key==="Enter"&&(t.preventDefault(),t.target.blur())});s("selAll").onclick=()=>{T({ignoreSpeaker:!s("fSpeaker").value}).slice(0,P).forEach(t=>L.add(t.id)),j()};s("delSel").onclick=async()=>{if(!L.size)return m("Nothing selected");confirm(`Delete ${L.size} transmissions? This can't be undone.`)&&(await h.remove([...L]),L.clear(),await S(),m("Deleted"))};s("reparse").onclick=async()=>{let t=new Set(T({ignoreSpeaker:!s("fSpeaker").value}).map(e=>e.id)),a=f.filter(e=>t.has(e.id)).map(e=>{let n=$(e.text,{facility:e.facility});return e.cleaned&&(delete n.speaker,delete n.phase),Object.assign(e,n)});await h.putMany(a),await S(),m(`Re-parsed ${a.length}`)};s("more").onclick=()=>{P+=150,j()};["gOnlyRaw","gUseFilter","gSize"].forEach(t=>s(t).addEventListener("input",ce));s("gCopy").onclick=async()=>{let t=le();if(!t.length)return m("Nothing to copy");let{prompt:a,map:e}=B(t);localStorage.setItem("atcp-gpt-map",JSON.stringify(e));try{await navigator.clipboard.writeText(a),m(`Copied ${t.length} lines. Paste into ChatGPT.`)}catch{s("gPreview").closest("details").open=!0,m("Clipboard blocked \u2014 copy it from the preview.")}};s("gApply").onclick=async()=>{let t=JSON.parse(localStorage.getItem("atcp-gpt-map")||"[]");if(!t.length){s("gResult").innerHTML='<span class="bad">Copy a prompt first, so I know which lines the reply belongs to.</span>';return}try{let{updated:a,junk:e,missing:n}=V(f,t,s("gReply").value);await h.putMany(a),s("gResult").innerHTML=`<span class="ok">Updated ${a.length} transmissions${e?`, ${e} marked junk`:""}.</span>${n.length?` <span class="bad">${n.length} lines didn't match.</span>`:""}`,s("gReply").value="",await S()}catch(a){s("gResult").innerHTML=`<span class="bad">${u(a.message)}</span>`}};s("dataBtn").onclick=t=>{t.stopPropagation(),s("dataMenu").classList.toggle("hidden")};s("importBtn").onclick=()=>s("importFile").click();s("importFile").onchange=async t=>{let a=t.target.files[0];if(a){try{let e=JSON.parse(await a.text()),n=Array.isArray(e)?e:e.transmissions||[],r=[],o=0;for(let i of n){if(!i.id||!(i.text||i.raw))continue;let{audioData:c,...l}=i;l.template||Object.assign(l,$(l.text||l.raw,{facility:l.facility})),r.push(l),c&&(await h.putAudio(i.id,await(await fetch(c)).blob()),o++)}await h.putMany(r),await S(),m(`Imported ${r.length} transmissions${o?` with ${o} clips`:""}`)}catch(e){m(`Import failed: ${e.message}`)}t.target.value=""}};async function de(t){let a=[];for(let r of f){let o={...r};if(t&&r.hasAudio){let i=await h.getAudio(r.id);i&&(o.audioData=await new Promise(c=>{let l=new FileReader;l.onload=()=>c(l.result),l.readAsDataURL(i)}))}a.push(o)}let e=new Blob([JSON.stringify({app:"atc-predictor",version:1,exportedAt:new Date().toISOString(),transmissions:a})],{type:"application/json"}),n=document.createElement("a");n.href=URL.createObjectURL(e),n.download=`atc-predictor-${new Date().toISOString().slice(0,10)}.json`,n.click(),setTimeout(()=>URL.revokeObjectURL(n.href),2e3)}s("exportBtn").onclick=()=>de(!1);s("exportAudioBtn").onclick=()=>de(!0);async function pe(){await h.putMany(ee()),await S(),m("Sample data loaded")}s("sampleBtn").onclick=pe;s("clearSampleBtn").onclick=async()=>{await h.remove(f.filter(t=>t.source==="sample").map(t=>t.id)),await S(),m("Sample data removed")};s("clearBtn").onclick=async()=>{confirm(`Delete all ${f.length} transmissions and audio? Export first if you want a backup. This can't be undone.`)&&(await h.clear(),await S(),m("Everything deleted"))};if(Oe){let t;chrome.runtime.onMessage.addListener(a=>{a?.type==="tx"&&(clearTimeout(t),t=setTimeout(S,800))})}S();
+</script>
+</body>
+</html>
