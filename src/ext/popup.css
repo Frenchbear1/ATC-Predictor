@@ -33,3 +33,16 @@ li.pilot { border-left-color: var(--warn); }
 li .tag { font-size: 10px; color: var(--dim); text-transform: uppercase; display:block; }
 li.empty { color: var(--dim); border-left-color: transparent; background: none; }
 .hidden { display:none; }
+.row-head { display:flex; align-items:center; justify-content:space-between; margin-top: 4px; }
+button.link { flex: none; background: none; border: none; color: var(--accent); padding: 0; font-weight: 600; }
+.favs { max-height: 220px; }
+li.fav { display:flex; align-items:center; gap: 8px; border-left-color: transparent; }
+.fname { flex: 1; min-width: 0; }
+.fname small { display:block; color: var(--dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.mini { flex: none; padding: 3px 9px; font-size: 11px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.dot.listening { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.dot.connecting, .dot.reconnecting { background: var(--warn); }
+.dot.error { background: var(--err); }
+.hint { color: var(--dim); font-size: 11px; margin: 6px 0 0; }
+label.check { margin: 0 0 6px; }

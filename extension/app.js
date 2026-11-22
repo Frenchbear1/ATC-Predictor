@@ -38,6 +38,18 @@ var FACILITY_LABELS = {
   ctaf: "CTAF/UNICOM",
   mixed: "Mixed feed"
 };
+function facilityFromFeed(feed = "") {
+  const f = feed.toLowerCase();
+  if (/atis/.test(f)) return "atis";
+  if (/(^|[_\s-])(del|clnc|clr|clearance)/.test(f)) return "del";
+  if (/(gnd|ground|ramp)/.test(f)) return "gnd";
+  if (/(twr|tower|local)/.test(f)) return "twr";
+  if (/(app|dep|approach|departure|tracon|final|director)/.test(f)) return "app";
+  if (/(ctr|center|artcc)/.test(f)) return "ctr";
+  if (/(ctaf|unicom|cta)/.test(f)) return "ctaf";
+  if (/(del.*gnd|gnd.*twr|twr.*app|combined|mixed)/.test(f)) return "mixed";
+  return "mixed";
+}
 var DIGIT_WORDS = {
   zero: "0",
   oh: "0",
@@ -823,6 +835,43 @@ function makeSample() {
   return out;
 }
 
+// src/lib/stream.js
+function mountFromInput(input = "") {
+  const s = input.trim();
+  try {
+    const u = new URL(s);
+    if (u.searchParams.get("mount")) return u.searchParams.get("mount");
+    const m = u.pathname.match(/\/(?:play\/)?([a-z0-9_.-]+?)(?:\.pls|\.m3u|\.mp3)?$/i);
+    if (m) return m[1];
+  } catch {
+  }
+  return s.replace(/\.(pls|m3u|mp3)$/i, "").replace(/[^a-z0-9_.-]/gi, "").toLowerCase();
+}
+function airportFromMount(mount = "") {
+  const m = mount.toUpperCase().match(/^([A-Z]{4})/);
+  return m ? m[1] : "";
+}
+async function findFeeds(icao) {
+  const r = await fetch(`https://www.liveatc.net/search/?icao=${encodeURIComponent(icao.toLowerCase())}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`LiveATC search failed (HTTP ${r.status})`);
+  const html = await r.text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const feeds = /* @__PURE__ */ new Map();
+  for (const a of doc.querySelectorAll('a[href*="mount="], a[href*="/play/"]')) {
+    const href = a.getAttribute("href") || "";
+    const m = href.match(/mount=([a-z0-9_.-]+)/i) || href.match(/\/play\/([a-z0-9_.-]+)\.pls/i);
+    if (!m) continue;
+    const mount = m[1].toLowerCase();
+    if (feeds.has(mount)) continue;
+    let label = "";
+    const row = a.closest("table, tr, div");
+    const strong = row?.querySelector("strong, b, h3, h2");
+    if (strong) label = strong.textContent.replace(/\s+/g, " ").trim();
+    feeds.set(mount, { mount, label: label || mount });
+  }
+  return [...feeds.values()];
+}
+
 // src/site/app.js
 var $ = (id) => document.getElementById(id);
 var esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -1006,11 +1055,12 @@ function render() {
   const sample = all.some((t) => t.source === "sample");
   $("banner").classList.toggle("hidden", !sample);
   $("banner").textContent = sample ? "Sample data is loaded (airport KSMP is made up). Remove it from Data \u25BE when you have real recordings." : "";
-  $("filters").classList.toggle("hidden", false);
   if (tab === "predict") renderPredict();
   if (tab === "script") renderScript();
   if (tab === "list") renderList();
   if (tab === "gpt") renderGpt();
+  if (tab === "feeds") renderFeeds();
+  $("filters").classList.toggle("hidden", tab === "feeds");
 }
 $("tabs").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-view]");
@@ -1231,6 +1281,125 @@ $("clearBtn").onclick = async () => {
   await load();
   toast("Everything deleted");
 };
+var getFavs = async () => (await chrome.storage.local.get("favorites")).favorites || [];
+var setFavs = (favorites) => chrome.storage.local.set({ favorites });
+async function addFav(mount, label = "") {
+  mount = mountFromInput(mount);
+  if (!mount) return false;
+  const favs = await getFavs();
+  if (favs.some((f) => f.mount === mount)) return false;
+  favs.push({ mount, airport: airportFromMount(mount), facility: facilityFromFeed(`${mount} ${label}`), label, enabled: true });
+  await setFavs(favs);
+  return true;
+}
+async function renderFeeds() {
+  if (!IN_EXT) return;
+  const favs = await getFavs();
+  const { feedState = {} } = await chrome.storage.session.get("feedState");
+  const { feedPrefs = {} } = await chrome.storage.local.get("feedPrefs");
+  $("fdAuto").checked = !!feedPrefs.autoStart;
+  if (!favs.length) {
+    $("favTable").innerHTML = '<div class="empty"><p>No favorites yet. Find an airport\u2019s feeds below and tick the ones you want.</p></div>';
+    return;
+  }
+  const counts = {};
+  for (const t of all) counts[t.feed] = (counts[t.feed] || 0) + 1;
+  $("favTable").innerHTML = favs.map((f) => {
+    const fs = feedState[`feed:${f.mount}`] || { state: "idle" };
+    const on = fs.state && fs.state !== "idle";
+    return `<div class="frow" data-mount="${esc(f.mount)}">
+      <span class="dot ${esc(fs.state || "idle")}" title="${esc(fs.detail || "")}"></span>
+      <input data-f="airport" value="${esc(f.airport)}" maxlength="4" title="Airport ICAO">
+      <div><input data-f="label" value="${esc(f.label)}" placeholder="${esc(f.mount)}" title="Label"><div class="st">${esc(f.mount)} \xB7 ${counts[f.mount] || 0} calls saved${on ? ` \xB7 ${esc(fs.detail || fs.state)}${fs.count ? ` \xB7 ${fs.count} this session` : ""}` : ""}</div></div>
+      <select data-f="facility">${FACILITIES.map((x) => opt(x, FACILITY_LABELS[x], f.facility)).join("")}</select>
+      <label class="check"><input type="checkbox" data-f="enabled" ${f.enabled !== false ? "checked" : ""}> In \u201CStart all\u201D</label>
+      <div class="btns"><button data-fa="toggle">${on ? "Stop" : "Start"}</button>
+        <button data-fa="listen" title="Open the LiveATC player to listen">Listen</button>
+        <button data-fa="remove" class="danger" title="Remove from favorites">\u2715</button></div>
+    </div>`;
+  }).join("");
+}
+if (IN_EXT) {
+  $("feedsTab").classList.remove("hidden");
+  $("favTable").addEventListener("change", async (e) => {
+    const row = e.target.closest(".frow");
+    const k = e.target.dataset.f;
+    if (!row || !k) return;
+    const favs = await getFavs();
+    const f = favs.find((x) => x.mount === row.dataset.mount);
+    f[k] = e.target.type === "checkbox" ? e.target.checked : k === "airport" ? e.target.value.toUpperCase() : e.target.value;
+    await setFavs(favs);
+    toast("Saved. Restart the feed for changes to apply.");
+  });
+  $("favTable").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-fa]");
+    if (!b) return;
+    const mount = b.closest(".frow").dataset.mount;
+    const favs = await getFavs();
+    const f = favs.find((x) => x.mount === mount);
+    if (b.dataset.fa === "toggle") {
+      const r = b.textContent === "Stop" ? await chrome.runtime.sendMessage({ type: "stopFeed", id: `feed:${mount}` }) : await chrome.runtime.sendMessage({ type: "startFeeds", feeds: [f] });
+      if (!r?.ok) toast(r?.error || "Failed");
+    }
+    if (b.dataset.fa === "listen") window.open(`https://www.liveatc.net/hlisten.php?mount=${encodeURIComponent(mount)}&icao=${encodeURIComponent((f.airport || "").toLowerCase())}`, "_blank");
+    if (b.dataset.fa === "remove") {
+      await chrome.runtime.sendMessage({ type: "stopFeed", id: `feed:${mount}` });
+      await setFavs(favs.filter((x) => x.mount !== mount));
+    }
+    renderFeeds();
+  });
+  $("fdStartAll").onclick = async () => {
+    const r = await chrome.runtime.sendMessage({ type: "startFavorites" });
+    if (!r?.ok) toast(r?.error || "Failed");
+  };
+  $("fdStopAll").onclick = () => chrome.runtime.sendMessage({ type: "stop" });
+  $("fdAuto").onchange = async () => {
+    const { feedPrefs = {} } = await chrome.storage.local.get("feedPrefs");
+    await chrome.storage.local.set({ feedPrefs: { ...feedPrefs, autoStart: $("fdAuto").checked } });
+  };
+  const find = async () => {
+    const icao = $("fdIcao").value.trim();
+    if (!icao) return;
+    $("fdResults").textContent = "Searching LiveATC\u2026";
+    try {
+      const feeds = await findFeeds(icao);
+      const favs = await getFavs();
+      if (!feeds.length) {
+        $("fdResults").textContent = "No feeds found for that airport. You can still add one by name on the right.";
+        return;
+      }
+      $("fdResults").innerHTML = `<div class="found">${feeds.map((f) => `<label><input type="checkbox" data-add="${esc(f.mount)}" data-label="${esc(f.label === f.mount ? "" : f.label)}" ${favs.some((x) => x.mount === f.mount) ? "checked disabled" : ""}>
+        <span>${esc(f.label)} <small>${esc(f.mount)}</small></span></label>`).join("")}</div>`;
+    } catch (err) {
+      $("fdResults").textContent = err.message;
+    }
+  };
+  $("fdFind").onclick = find;
+  $("fdIcao").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") find();
+  });
+  $("fdResults").addEventListener("change", async (e) => {
+    const c = e.target.closest("[data-add]");
+    if (!c || !c.checked) return;
+    if (await addFav(c.dataset.add, c.dataset.label)) {
+      c.disabled = true;
+      toast(`Added ${c.dataset.add}`);
+      renderFeeds();
+    }
+  });
+  $("fdAdd").onclick = async () => {
+    const ok = await addFav($("fdManual").value);
+    $("fdMsg").innerHTML = ok ? '<span class="ok">Added.</span>' : '<span class="bad">Not added (empty or already a favorite).</span>';
+    if (ok) {
+      $("fdManual").value = "";
+      renderFeeds();
+    }
+  };
+  chrome.storage.onChanged.addListener(() => {
+    if (tab === "feeds") renderFeeds();
+  });
+  if (location.hash === "#feeds") document.querySelector("#tabs button[data-view=feeds]").click();
+}
 if (IN_EXT) {
   let t;
   chrome.runtime.onMessage.addListener((m) => {

@@ -1,8 +1,8 @@
 # ATC Predictor
 
-Listen to a LiveATC feed, and this Chrome extension transcribes each radio call **on your own computer** (Whisper running inside Chrome, so there's no server and no API key). The website then groups the calls into scenarios by airport, facility, runway and phase of flight, so you can see what the controller is most likely to say next.
+Pick your favorite LiveATC feeds, and this Chrome extension records them in the background and transcribes each radio call **on your own computer** (Whisper running inside Chrome, so there's no server and no API key). The website then groups the calls into scenarios by airport, facility, runway and phase of flight, so you can see what the controller is most likely to say next.
 
-Personal use only. LiveATC's terms prohibit third-party use of its streams, so this only records the tab you're actively listening to. Don't republish the audio or transcripts.
+Personal use only. The favorites mode pulls LiveATC's audio streams directly, which their terms of use prohibit for third-party apps. Keep it to a few feeds for yourself, and don't republish the audio or transcripts.
 
 ## What's in the folder
 
@@ -22,17 +22,25 @@ Personal use only. LiveATC's terms prohibit third-party use of its streams, so t
 5. Select the `extension` folder inside the unzipped folder and click **Select Folder**.
 6. Click the puzzle-piece icon in the toolbar, then the pin next to **ATC Predictor** so it stays visible.
 
-## Record a feed
+## Record your favorite feeds (automatic)
 
-1. Open a LiveATC feed and press play so you can hear it. The pop-out player page works best, since its URL includes the feed name (for example `...hlisten.php?mount=kbos_twr&icao=kbos`).
-2. While that tab is the active tab, click the **ATC Predictor** icon.
-3. Check **Airport** (for example `KBOS`) and **Facility**. Both are filled in automatically from the LiveATC URL when possible.
-4. Choose a **Speech model**. **Base** is the default. **Small** is more accurate but slower.
-5. Click **Start listening**. The first time, the model downloads from Hugging Face (about 80 MB for Base) and is cached after that.
-6. Leave the tab playing. The badge counts calls, and **Latest calls** shows them as they come in.
-7. Click **Stop** when you're done, or just close the tab.
+1. Click the **ATC Predictor** icon, then **Manage…** (this opens the **Feeds** tab).
+2. Under **Find feeds for an airport**, type an ICAO code (for example `KBOS`) and click **Find**.
+3. Tick the feeds you want, like Tower and Ground. They appear at the top as favorites. You can also paste a LiveATC link or feed name (like `kbos_twr`) under **Add a feed by link or name**.
+4. Check each favorite's **Facility** (Tower, Ground…). It's guessed from the feed name.
+5. Click **Start all**. The first time, the speech model downloads (about 80 MB for Base) and is cached after that.
 
-If calls get cut in half, raise **End-of-call gap** under **Advanced**. If static or noise gets transcribed, raise **Squelch sensitivity**.
+The feeds record in the background with no tabs, windows or sound. Each favorite gets a green dot when it's connected, and the badge on the icon counts calls. Dropped streams reconnect on their own. Tick **Start favorites automatically when Chrome opens** if you want it to run every time Chrome starts. **Listen** opens the LiveATC player if you want to hear a feed.
+
+Every feed shares one speech model on your laptop, so 2–4 feeds at a time is realistic. If calls pile up ("calls waiting to transcribe" in the popup), run fewer feeds or switch to the **Tiny** model in **Settings**.
+
+### Or record the tab you're playing
+
+Open a LiveATC player, press play, click the extension icon, open **Record this tab instead**, then click **Record this tab**.
+
+### Tuning
+
+In **Settings**: if calls get cut in half, raise **End-of-call gap**. If static gets transcribed, raise **Squelch sensitivity**. Changes apply the next time a feed starts.
 
 ## Use the website
 

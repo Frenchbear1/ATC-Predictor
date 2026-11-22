@@ -13,6 +13,16 @@ var PHASE_LABELS = {
   "atis": "ATIS",
   "other": "Other"
 };
+var FACILITY_LABELS = {
+  del: "Clearance Delivery",
+  gnd: "Ground",
+  twr: "Tower",
+  app: "Approach/Departure",
+  ctr: "Center",
+  atis: "ATIS",
+  ctaf: "CTAF/UNICOM",
+  mixed: "Mixed feed"
+};
 function facilityFromFeed(feed = "") {
   const f = feed.toLowerCase();
   if (/atis/.test(f)) return "atis";
@@ -136,10 +146,18 @@ var CALLSIGN_SRC = [
 var CALLSIGN_RE = new RegExp(CALLSIGN_SRC);
 var CALLSIGN_G = new RegExp(CALLSIGN_SRC, "g");
 
+// src/lib/stream.js
+function airportFromMount(mount = "") {
+  const m = mount.toUpperCase().match(/^([A-Z]{4})/);
+  return m ? m[1] : "";
+}
+
 // src/ext/popup.js
 var $ = (id) => document.getElementById(id);
+var esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var fields = ["airport", "feed", "facility", "model", "customModel", "sensitivity", "gapMs", "keepAudio"];
 var tab;
+var tabGuess = {};
 function readSettings() {
   const model = $("model").value === "custom" ? $("customModel").value.trim() || "Xenova/whisper-base.en" : $("model").value;
   return { model, sensitivity: +$("sensitivity").value, gapMs: +$("gapMs").value, keepAudio: $("keepAudio").checked };
@@ -153,7 +171,7 @@ function guessFromTab(t) {
       const icao = u.searchParams.get("icao");
       if (mount) out.feed = mount;
       if (icao) out.airport = icao.toUpperCase();
-      else if (mount) out.airport = mount.split("_")[0].toUpperCase();
+      else if (mount) out.airport = airportFromMount(mount);
     }
   } catch {
   }
@@ -173,11 +191,13 @@ async function init() {
     if ($(f).type === "checkbox") $(f).checked = saved[f];
     else $(f).value = saved[f];
   }
+  const { feedPrefs = {} } = await chrome.storage.local.get("feedPrefs");
+  $("autoStart").checked = !!feedPrefs.autoStart;
   [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const g = tab ? guessFromTab(tab) : {};
-  if (g.airport) $("airport").value = g.airport;
-  if (g.feed) $("feed").value = g.feed;
-  if (g.facility) $("facility").value = g.facility;
+  tabGuess = tab ? guessFromTab(tab) : {};
+  if (tabGuess.airport) $("airport").value = tabGuess.airport;
+  if (tabGuess.feed) $("feed").value = tabGuess.feed;
+  if (tabGuess.facility) $("facility").value = tabGuess.facility;
   syncOutputs();
   render();
 }
@@ -192,30 +212,76 @@ async function save() {
   await chrome.storage.local.set({ popup: v });
 }
 async function render() {
-  const { status = { state: "idle" }, recent = [] } = await chrome.storage.session.get(["status", "recent"]);
+  const { status = { state: "idle" }, recent = [], feedState = {} } = await chrome.storage.session.get(["status", "recent", "feedState"]);
+  const { favorites = [] } = await chrome.storage.local.get("favorites");
   const st = status.state || "idle";
   $("state").textContent = st;
   $("state").className = `pill ${st}`;
   if (status.detail) $("detail").textContent = status.detail;
-  const on = st === "listening" || st === "loading";
-  $("start").disabled = on;
-  $("stop").disabled = !on;
+  const favUl = $("favs");
+  if (!favorites.length) favUl.innerHTML = '<li class="empty">No favorites yet. Click Manage\u2026 to add airports.</li>';
+  else {
+    favUl.innerHTML = favorites.map((f) => {
+      const fs = feedState[`feed:${f.mount}`] || { state: "idle" };
+      const on = fs.state && fs.state !== "idle";
+      return `<li class="fav"><span class="dot ${esc(fs.state || "idle")}" title="${esc(fs.detail || fs.state || "")}"></span>
+        <div class="fname"><b>${esc(f.airport)}</b> ${esc(f.label || FACILITY_LABELS[f.facility] || f.mount)}
+          <small>${esc(f.mount)}${fs.count ? ` \xB7 ${fs.count} calls` : ""}${fs.state === "reconnecting" ? ` \xB7 ${esc(fs.detail)}` : ""}</small></div>
+        <button class="mini" data-toggle="${esc(f.mount)}">${on ? "Stop" : "Start"}</button></li>`;
+    }).join("");
+  }
+  const anyOn = Object.values(feedState).some((x) => x.state && x.state !== "idle");
+  $("startAll").disabled = !favorites.length;
+  $("stopAll").disabled = !(anyOn || st === "listening" || st === "loading");
+  const isFav = favorites.some((f) => f.mount === tabGuess.feed);
+  $("addTab").classList.toggle("hidden", !tabGuess.feed || isFav || !/liveatc/.test(tab?.url || ""));
   const ul = $("recent");
-  ul.innerHTML = "";
   if (!recent.length) {
     ul.innerHTML = '<li class="empty">Nothing yet.</li>';
     return;
   }
+  ul.innerHTML = "";
   for (const r of recent) {
     const li = document.createElement("li");
     li.className = r.speaker;
     const tag = document.createElement("span");
     tag.className = "tag";
-    tag.textContent = `${r.speaker === "atc" ? "ATC" : r.speaker === "pilot" ? "Pilot" : "?"} \xB7 ${PHASE_LABELS[r.phase] || r.phase}`;
+    tag.textContent = `${r.airport || ""} \xB7 ${r.speaker === "atc" ? "ATC" : r.speaker === "pilot" ? "Pilot" : "?"} \xB7 ${PHASE_LABELS[r.phase] || r.phase}`;
     li.append(tag, document.createTextNode(r.text));
     ul.append(li);
   }
 }
+$("startAll").onclick = async () => {
+  await save();
+  const res = await chrome.runtime.sendMessage({ type: "startFavorites" });
+  if (!res?.ok) $("detail").textContent = `Couldn't start: ${res?.error || "unknown error"}`;
+  render();
+};
+$("stopAll").onclick = async () => {
+  await chrome.runtime.sendMessage({ type: "stop" });
+  render();
+};
+$("favs").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-toggle]");
+  if (!b) return;
+  const mount = b.dataset.toggle;
+  const { favorites = [] } = await chrome.storage.local.get("favorites");
+  const f = favorites.find((x) => x.mount === mount);
+  await save();
+  if (b.textContent === "Stop") await chrome.runtime.sendMessage({ type: "stopFeed", id: `feed:${mount}` });
+  else await chrome.runtime.sendMessage({ type: "startFeeds", feeds: [f] });
+  render();
+});
+$("addTab").onclick = async () => {
+  const { favorites = [] } = await chrome.storage.local.get("favorites");
+  favorites.push({ mount: tabGuess.feed, airport: tabGuess.airport || airportFromMount(tabGuess.feed), facility: tabGuess.facility || "mixed", label: "", enabled: true });
+  await chrome.storage.local.set({ favorites });
+  render();
+};
+$("autoStart").onchange = async () => {
+  const { feedPrefs = {} } = await chrome.storage.local.get("feedPrefs");
+  await chrome.storage.local.set({ feedPrefs: { ...feedPrefs, autoStart: $("autoStart").checked } });
+};
 $("start").onclick = async () => {
   if (!tab) return;
   if (!$("airport").value.trim()) {
@@ -223,16 +289,12 @@ $("start").onclick = async () => {
     return;
   }
   await save();
-  $("start").disabled = true;
   const meta = { airport: $("airport").value.trim().toUpperCase(), feed: $("feed").value.trim(), facility: $("facility").value };
   const res = await chrome.runtime.sendMessage({ type: "start", tabId: tab.id, meta, settings: readSettings() });
   if (!res?.ok) $("detail").textContent = `Couldn't start: ${res?.error || "unknown error"}`;
   render();
 };
-$("stop").onclick = async () => {
-  await chrome.runtime.sendMessage({ type: "stop" });
-  render();
-};
+$("manage").onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html#feeds") });
 $("open").onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 $("feed").addEventListener("input", () => {
   $("facility").value = facilityFromFeed($("feed").value);
@@ -242,7 +304,5 @@ for (const f of fields) $(f).addEventListener("change", () => {
   save();
 });
 ["sensitivity", "gapMs"].forEach((f) => $(f).addEventListener("input", syncOutputs));
-chrome.storage.onChanged.addListener((c, area) => {
-  if (area === "session") render();
-});
+chrome.storage.onChanged.addListener(() => render());
 init();

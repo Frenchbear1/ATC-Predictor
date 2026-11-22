@@ -10,7 +10,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs
+// ../atc/node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs
 var ort_webgpu_bundle_min_exports = {};
 __export(ort_webgpu_bundle_min_exports, {
   InferenceSession: () => bc,
@@ -3986,10 +3986,10 @@ var $l = rn;
 }
 Object.defineProperty(ee.versions, "web", { value: is, enumerable: true });
 
-// node_modules/onnxruntime-common/dist/esm/version.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/version.js
 var version = "1.30.0";
 
-// node_modules/onnxruntime-common/dist/esm/env-impl.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/env-impl.js
 var logLevelValue = "warning";
 var env = {
   wasm: {},
@@ -4011,7 +4011,7 @@ var env = {
 };
 Object.defineProperty(env, "logLevel", { enumerable: true });
 
-// node_modules/onnxruntime-common/dist/esm/tensor-conversion-impl.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/tensor-conversion-impl.js
 var tensorToDataURL = (tensor, options) => {
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : new OffscreenCanvas(1, 1);
   canvas.width = tensor.dims[3];
@@ -4170,7 +4170,7 @@ var tensorToImageData = (tensor, options) => {
   return image;
 };
 
-// node_modules/onnxruntime-common/dist/esm/tensor-factory-impl.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/tensor-factory-impl.js
 var bufferToTensor = (buffer, options) => {
   if (buffer === void 0) {
     throw new Error("Image buffer must be defined");
@@ -4379,7 +4379,7 @@ var tensorFromMLTensor = (mlTensor, options) => {
 };
 var tensorFromPinnedBuffer = (type, buffer, dims) => new Tensor({ location: "cpu-pinned", type, data: buffer, dims: dims ?? [buffer.length] });
 
-// node_modules/onnxruntime-common/dist/esm/tensor-impl-type-mapping.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/tensor-impl-type-mapping.js
 var NUMERIC_TENSOR_TYPE_TO_TYPEDARRAY_MAP = /* @__PURE__ */ new Map([
   ["float32", Float32Array],
   ["uint8", Uint8Array],
@@ -4428,7 +4428,7 @@ var checkTypedArray = () => {
   }
 };
 
-// node_modules/onnxruntime-common/dist/esm/tensor-utils-impl.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/tensor-utils-impl.js
 var calculateSize = (dims) => {
   let size = 1;
   for (let i = 0; i < dims.length; i++) {
@@ -4480,7 +4480,7 @@ var tensorReshape = (tensor, dims) => {
   }
 };
 
-// node_modules/onnxruntime-common/dist/esm/tensor-impl.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/tensor-impl.js
 var Tensor = class {
   /**
    * implementation.
@@ -4747,10 +4747,10 @@ var Tensor = class {
   }
 };
 
-// node_modules/onnxruntime-common/dist/esm/tensor.js
+// ../atc/node_modules/onnxruntime-common/dist/esm/tensor.js
 var Tensor2 = Tensor;
 
-// node_modules/@huggingface/transformers/dist/transformers.web.js
+// ../atc/node_modules/@huggingface/transformers/dist/transformers.web.js
 var __defProp2 = Object.defineProperty;
 var __export2 = (target, all) => {
   for (var name in all)
@@ -5078,7 +5078,7 @@ var DictionarySplitter = class {
   split(text) {
     const result = [];
     const n = text.length;
-    let start2 = 0;
+    let start = 0;
     let i = 0;
     while (i < n) {
       let node = this.trie;
@@ -5091,18 +5091,18 @@ var DictionarySplitter = class {
         ++j2;
       }
       if (match) {
-        if (i > start2) {
-          result.push(text.slice(start2, i));
+        if (i > start) {
+          result.push(text.slice(start, i));
         }
         result.push(match);
         i += match.length;
-        start2 = i;
+        start = i;
       } else {
         ++i;
       }
     }
-    if (start2 < n) {
-      result.push(text.slice(start2));
+    if (start < n) {
+      result.push(text.slice(start));
     }
     return result;
   }
@@ -5365,13 +5365,13 @@ var get_ascii_fold_additions = (positive_atom) => {
   }
   return additions;
 };
-var parse_character_class = (regex, start2, ascii_fold, apply_ascii_fold = true, nesting_depth = 1) => {
+var parse_character_class = (regex, start, ascii_fold, apply_ascii_fold = true, nesting_depth = 1) => {
   if (nesting_depth > MAX_CHARACTER_CLASS_NESTING_DEPTH) {
     throw new SyntaxError(
-      `Maximum character-class nesting depth of ${MAX_CHARACTER_CLASS_NESTING_DEPTH} exceeded at index ${start2}`
+      `Maximum character-class nesting depth of ${MAX_CHARACTER_CLASS_NESTING_DEPTH} exceeded at index ${start}`
     );
   }
-  let i = start2 + 1;
+  let i = start + 1;
   const negated = regex[i] === "^";
   if (negated) ++i;
   const first_content_index = i;
@@ -5396,14 +5396,14 @@ var parse_character_class = (regex, start2, ascii_fold, apply_ascii_fold = true,
             `Malformed character-class intersection with an empty operand at index ${i}`
           );
         }
-        throw new SyntaxError(`Empty character class at index ${start2}`);
+        throw new SyntaxError(`Empty character class at index ${start}`);
       }
       const contains_complex_set = operands.some(
         (candidate) => candidate.contains_complex_set
       );
       if (negated && operands.length > 1 && contains_nested_negated_complex_set) {
         throw new SyntaxError(
-          `Unsupported outer-negated character-class intersection with a nested negated class containing a Unicode property, POSIX class, or shorthand at index ${start2}`
+          `Unsupported outer-negated character-class intersection with a nested negated class containing a Unicode property, POSIX class, or shorthand at index ${start}`
         );
       }
       const first_atom = compile_character_class_operand(operands[0]);
@@ -5523,7 +5523,7 @@ var parse_character_class = (regex, start2, ascii_fold, apply_ascii_fold = true,
     i += char.length;
   }
   throw new SyntaxError(
-    `${operands.length > 1 ? "Unterminated character-class intersection" : "Unterminated character class"} at index ${start2}`
+    `${operands.length > 1 ? "Unterminated character-class intersection" : "Unterminated character class"} at index ${start}`
   );
 };
 var rewrite_oniguruma_to_js = (regex) => {
@@ -6470,14 +6470,14 @@ var WordPieceTokenizer = class extends TokenizerModel_default {
         continue;
       }
       let is_unknown = false;
-      let start2 = 0;
+      let start = 0;
       const sub_tokens = [];
-      while (start2 < chars.length) {
+      while (start < chars.length) {
         let end = chars.length;
         let current_substring = null;
-        while (start2 < end) {
-          let substr = chars.slice(start2, end).join("");
-          if (start2 > 0) {
+        while (start < end) {
+          let substr = chars.slice(start, end).join("");
+          if (start > 0) {
             substr = this.config.continuing_subword_prefix + substr;
           }
           if (this.tokens_to_ids.has(substr)) {
@@ -6491,7 +6491,7 @@ var WordPieceTokenizer = class extends TokenizerModel_default {
           break;
         }
         sub_tokens.push(current_substring);
-        start2 = end;
+        start = end;
       }
       if (is_unknown) {
         output_tokens.push(this.unk_token);
@@ -6556,11 +6556,11 @@ var CharTrie = class {
    * @param start The index to start searching from.
    * @yields Each stored string that is a prefix of `chars` starting at `start`.
    */
-  *common_prefix_search(chars, start2 = 0) {
+  *common_prefix_search(chars, start = 0) {
     let node = this.root;
     if (node === void 0) return;
     let prefix = "";
-    for (let i = start2; i < chars.length; ++i) {
+    for (let i = start; i < chars.length; ++i) {
       const ch = chars[i];
       prefix += ch;
       node = node.children.get(ch);
@@ -7096,7 +7096,7 @@ var BPE = class extends TokenizerModel_default {
     }
     let result = [];
     if (word.length > 1) {
-      const queue = new PriorityQueue_default((a, b) => a.score < b.score);
+      const queue2 = new PriorityQueue_default((a, b) => a.score < b.score);
       let starting_node = {
         token: word[0],
         bias: 0,
@@ -7113,11 +7113,11 @@ var BPE = class extends TokenizerModel_default {
           next: null
         };
         previous_node.next = current_node;
-        this.add_node(queue, previous_node);
+        this.add_node(queue2, previous_node);
         previous_node = current_node;
       }
-      while (!queue.is_empty()) {
-        const node = queue.pop();
+      while (!queue2.is_empty()) {
+        const node = queue2.pop();
         if (node.deleted || !node.next || node.next.deleted) continue;
         node.deleted = true;
         node.next.deleted = true;
@@ -7139,13 +7139,13 @@ var BPE = class extends TokenizerModel_default {
         };
         if (merged.prev) {
           merged.prev.next = merged;
-          this.add_node(queue, merged.prev);
+          this.add_node(queue2, merged.prev);
         } else {
           starting_node = merged;
         }
         if (merged.next) {
           merged.next.prev = merged;
-          this.add_node(queue, merged);
+          this.add_node(queue2, merged);
         }
       }
       for (let current_node = starting_node; current_node !== null; current_node = current_node.next) {
@@ -7169,13 +7169,13 @@ var BPE = class extends TokenizerModel_default {
    * @param queue
    * @param node
    */
-  add_node(queue, node) {
+  add_node(queue2, node) {
     const rank = this.bpe_ranks.get(
       JSON.stringify([node.token, node.next.token])
     );
     if (rank !== void 0) {
       node.score = rank + node.bias;
-      queue.push(node);
+      queue2.push(node);
     }
   }
   /**
@@ -8499,10 +8499,10 @@ var UnaryExpression = class extends Expression {
   type = "UnaryExpression";
 };
 var SliceExpression = class extends Expression {
-  constructor(start2 = void 0, stop2 = void 0, step = void 0) {
+  constructor(start = void 0, stop = void 0, step = void 0) {
     super();
-    this.start = start2;
-    this.stop = stop2;
+    this.start = start;
+    this.stop = stop;
     this.step = step;
   }
   type = "SliceExpression";
@@ -9103,37 +9103,37 @@ function parse(tokens) {
   }
   return program;
 }
-function range(start2, stop2, step = 1) {
-  if (stop2 === void 0) {
-    stop2 = start2;
-    start2 = 0;
+function range(start, stop, step = 1) {
+  if (stop === void 0) {
+    stop = start;
+    start = 0;
   }
   if (step === 0) {
     throw new Error("range() step must not be zero");
   }
   const result = [];
   if (step > 0) {
-    for (let i = start2; i < stop2; i += step) {
+    for (let i = start; i < stop; i += step) {
       result.push(i);
     }
   } else {
-    for (let i = start2; i > stop2; i += step) {
+    for (let i = start; i > stop; i += step) {
       result.push(i);
     }
   }
   return result;
 }
-function slice(array, start2, stop2, step = 1) {
+function slice(array, start, stop, step = 1) {
   const direction = Math.sign(step);
   if (direction >= 0) {
-    start2 = (start2 ??= 0) < 0 ? Math.max(array.length + start2, 0) : Math.min(start2, array.length);
-    stop2 = (stop2 ??= array.length) < 0 ? Math.max(array.length + stop2, 0) : Math.min(stop2, array.length);
+    start = (start ??= 0) < 0 ? Math.max(array.length + start, 0) : Math.min(start, array.length);
+    stop = (stop ??= array.length) < 0 ? Math.max(array.length + stop, 0) : Math.min(stop, array.length);
   } else {
-    start2 = (start2 ??= array.length - 1) < 0 ? Math.max(array.length + start2, -1) : Math.min(start2, array.length - 1);
-    stop2 = (stop2 ??= -1) < -1 ? Math.max(array.length + stop2, -1) : Math.min(stop2, array.length - 1);
+    start = (start ??= array.length - 1) < 0 ? Math.max(array.length + start, -1) : Math.min(start, array.length - 1);
+    stop = (stop ??= -1) < -1 ? Math.max(array.length + stop, -1) : Math.min(stop, array.length - 1);
   }
   const result = [];
-  for (let i = start2; direction * i < direction * stop2; i += step) {
+  for (let i = start; direction * i < direction * stop; i += step) {
     result.push(array[i]);
   }
   return result;
@@ -10557,22 +10557,22 @@ var Interpreter = class {
     if (!(object instanceof ArrayValue || object instanceof StringValue)) {
       throw new Error("Slice object must be an array or string");
     }
-    const start2 = this.evaluate(expr.start, environment);
-    const stop2 = this.evaluate(expr.stop, environment);
+    const start = this.evaluate(expr.start, environment);
+    const stop = this.evaluate(expr.stop, environment);
     const step = this.evaluate(expr.step, environment);
-    if (!(start2 instanceof IntegerValue || start2 instanceof UndefinedValue)) {
+    if (!(start instanceof IntegerValue || start instanceof UndefinedValue)) {
       throw new Error("Slice start must be numeric or undefined");
     }
-    if (!(stop2 instanceof IntegerValue || stop2 instanceof UndefinedValue)) {
+    if (!(stop instanceof IntegerValue || stop instanceof UndefinedValue)) {
       throw new Error("Slice stop must be numeric or undefined");
     }
     if (!(step instanceof IntegerValue || step instanceof UndefinedValue)) {
       throw new Error("Slice step must be numeric or undefined");
     }
     if (object instanceof ArrayValue) {
-      return new ArrayValue(slice(object.value, start2.value, stop2.value, step.value));
+      return new ArrayValue(slice(object.value, start.value, stop.value, step.value));
     } else {
-      return new StringValue(slice(Array.from(object.value), start2.value, stop2.value, step.value).join(""));
+      return new StringValue(slice(Array.from(object.value), start.value, stop.value, step.value).join(""));
     }
   }
   evaluateMemberExpression(expr, environment) {
@@ -13392,13 +13392,13 @@ async function createInferenceSession(buffer_or_path, session_options, session_c
     logSeverityLevel,
     ...session_options
   });
-  const session2 = await (apis.IS_WEB_ENV ? webInitChain = webInitChain.then(load) : load());
-  session2.config = session_config;
-  return session2;
+  const session = await (apis.IS_WEB_ENV ? webInitChain = webInitChain.then(load) : load());
+  session.config = session_config;
+  return session;
 }
 var webInferenceChain = Promise.resolve();
-async function runInferenceSession(session2, ortFeed) {
-  const run2 = () => session2.run(ortFeed);
+async function runInferenceSession(session, ortFeed) {
+  const run2 = () => session.run(ortFeed);
   return apis.IS_WEB_ENV ? webInferenceChain = webInferenceChain.then(run2) : run2();
 }
 function isONNXTensor(x) {
@@ -13441,7 +13441,7 @@ if (ONNX_ENV) {
   };
 }
 var wrap = async (session_bytes, session_options, names) => {
-  const session2 = await createInferenceSession(new Uint8Array(session_bytes), session_options);
+  const session = await createInferenceSession(new Uint8Array(session_bytes), session_options);
   return (
     /** @type {any} */
     (async (inputs) => {
@@ -13449,7 +13449,7 @@ var wrap = async (session_bytes, session_options, names) => {
       const ortFeed = Object.fromEntries(
         Object.entries(inputs).map(([k, v]) => [k, (proxied ? v.clone() : v).ort_tensor])
       );
-      const outputs = await runInferenceSession(session2, ortFeed);
+      const outputs = await runInferenceSession(session, ortFeed);
       if (Array.isArray(names)) {
         return names.map((n) => new Tensor22(outputs[n]));
       } else {
@@ -14991,20 +14991,20 @@ var Tensor22 = class _Tensor {
         slice3 = safeIndex(slice3, this.dims[sliceIndex], sliceIndex);
         newOffsets.push([slice3, slice3 + 1]);
       } else if (Array.isArray(slice3) && slice3.length === 2) {
-        let [start2, end] = slice3;
-        start2 = start2 === null ? 0 : safeIndex(start2, this.dims[sliceIndex], sliceIndex, false);
+        let [start, end] = slice3;
+        start = start === null ? 0 : safeIndex(start, this.dims[sliceIndex], sliceIndex, false);
         end = end === null ? this.dims[sliceIndex] : safeIndex(end, this.dims[sliceIndex], sliceIndex, false);
-        if (start2 > end) {
+        if (start > end) {
           throw new Error(`Invalid slice: ${slice3}`);
         }
-        const offsets = [Math.max(start2, 0), Math.min(end, this.dims[sliceIndex])];
+        const offsets = [Math.max(start, 0), Math.min(end, this.dims[sliceIndex])];
         newOffsets.push(offsets);
         newTensorDims.push(offsets[1] - offsets[0]);
       } else {
         throw new Error(`Invalid slice: ${slice3}`);
       }
     }
-    const newDims = newOffsets.map(([start2, end]) => end - start2);
+    const newDims = newOffsets.map(([start, end]) => end - start);
     const newBufferSize = newDims.reduce((a, b) => a * b);
     const this_data = this.data;
     const data = new this_data.constructor(newBufferSize);
@@ -15017,12 +15017,12 @@ var Tensor22 = class _Tensor {
       }
     }
     if (isContiguous) {
-      const start2 = newOffsets[0][0] * stride[0];
+      const start = newOffsets[0][0] * stride[0];
       const end = newOffsets[0][1] * stride[0];
       if (ArrayBuffer.isView(this_data)) {
-        data.set(this_data.subarray(start2, end));
+        data.set(this_data.subarray(start, end));
       } else if (Array.isArray(this_data)) {
-        const slicedData = this_data.slice(start2, end);
+        const slicedData = this_data.slice(start, end);
         for (let i = 0; i < slicedData.length; ++i) {
           data[i] = slicedData[i];
         }
@@ -17688,9 +17688,9 @@ function _create_triangular_filter_bank(fft_freqs, filter_freqs) {
   }
   return ret;
 }
-function linspace(start2, end, num) {
-  const step = (end - start2) / (num - 1);
-  return Float64Array.from({ length: num }, (_, i) => start2 + step * i);
+function linspace(start, end, num) {
+  const step = (end - start) / (num - 1);
+  return Float64Array.from({ length: num }, (_, i) => start + step * i);
 }
 function mel_filter_bank(num_frequency_bins, num_mel_filters, min_frequency, max_frequency, sampling_rate, norm = null, mel_scale = "htk", triangularize_in_mel_space = false) {
   if (norm !== null && norm !== "slaney") {
@@ -18829,10 +18829,10 @@ var PyAnnoteFeatureExtractor = class extends FeatureExtractor {
       for (let i = 0; i < scores.length; ++i) {
         const probabilities = softmax(scores[i]);
         const [score, id] = max(probabilities);
-        const [start2, end] = [i, i + 1];
+        const [start, end] = [i, i + 1];
         if (id !== current_speaker) {
           current_speaker = id;
-          accumulated_segments.push({ id, start: start2, end, score });
+          accumulated_segments.push({ id, start, end, score });
         } else {
           accumulated_segments.at(-1).end = end;
           accumulated_segments.at(-1).score += score;
@@ -18842,11 +18842,11 @@ var PyAnnoteFeatureExtractor = class extends FeatureExtractor {
         accumulated_segments.map(
           // Convert frame-space to time-space
           // and compute the confidence
-          ({ id, start: start2, end, score }) => ({
+          ({ id, start, end, score }) => ({
             id,
-            start: start2 * ratio,
+            start: start * ratio,
             end: end * ratio,
-            confidence: score / (end - start2)
+            confidence: score / (end - start)
           })
         )
       );
@@ -24141,8 +24141,8 @@ async function constructSessions(pretrained_model_name_or_path, names, options, 
           cache_config,
           name
         );
-        const session2 = await createInferenceSession(buffer_or_path, session_options, session_config);
-        return [name, session2];
+        const session = await createInferenceSession(buffer_or_path, session_options, session_config);
+        return [name, session];
       })
     )
   );
@@ -24157,8 +24157,8 @@ function replaceTensors(obj) {
   }
   return obj;
 }
-async function sessionRun(session2, inputs) {
-  const checkedInputs = validateInputs(session2, inputs);
+async function sessionRun(session, inputs) {
+  const checkedInputs = validateInputs(session, inputs);
   try {
     const ortFeed = Object.fromEntries(
       Object.entries(checkedInputs).map(([k, v]) => {
@@ -24174,7 +24174,7 @@ async function sessionRun(session2, inputs) {
         return [k, tensor];
       })
     );
-    const output = await runInferenceSession(session2, ortFeed);
+    const output = await runInferenceSession(session, ortFeed);
     return replaceTensors(output);
   } catch (e) {
     const formatted = Object.fromEntries(
@@ -24195,10 +24195,10 @@ async function sessionRun(session2, inputs) {
     throw e;
   }
 }
-function validateInputs(session2, inputs) {
+function validateInputs(session, inputs) {
   const checkedInputs = /* @__PURE__ */ Object.create(null);
   const missingInputs = [];
-  for (const inputName of session2.inputNames) {
+  for (const inputName of session.inputNames) {
     const tensor = inputs[inputName];
     if (!(tensor instanceof Tensor22)) {
       missingInputs.push(inputName);
@@ -24212,9 +24212,9 @@ function validateInputs(session2, inputs) {
     );
   }
   const numInputsProvided = Object.keys(inputs).length;
-  const numInputsNeeded = session2.inputNames.length;
+  const numInputsNeeded = session.inputNames.length;
   if (numInputsProvided > numInputsNeeded) {
-    let ignored = Object.keys(inputs).filter((inputName) => !session2.inputNames.includes(inputName));
+    let ignored = Object.keys(inputs).filter((inputName) => !session.inputNames.includes(inputName));
     logger.warn(
       `WARNING: Too many inputs were provided (${numInputsProvided} > ${numInputsNeeded}). The following inputs will be ignored: "${ignored.join(", ")}".`
     );
@@ -25753,8 +25753,8 @@ async function get_model_files(modelId, { config = null, dtype: overrideDtype = 
       files.push(dataFilePath);
     }
   };
-  const { sessions, optional_configs } = getSessionsConfig(modelType, config, { model_file_name });
-  for (const [sessionKey, baseName] of Object.entries(sessions)) {
+  const { sessions: sessions2, optional_configs } = getSessionsConfig(modelType, config, { model_file_name });
+  for (const [sessionKey, baseName] of Object.entries(sessions2)) {
     add_model_file(sessionKey, baseName);
   }
   if (optional_configs) {
@@ -25887,10 +25887,10 @@ var PreTrainedModel = class extends Callable {
    * @param {Record<string, any>} sessions The inference sessions for the model.
    * @param {Record<string, Object>} configs Additional configuration files (e.g., generation_config.json).
    */
-  constructor(config, sessions, configs) {
+  constructor(config, sessions2, configs) {
     super();
     this.config = config;
-    this.sessions = sessions;
+    this.sessions = sessions2;
     this.configs = configs;
     const modelName = MODEL_CLASS_TO_NAME_MAPPING.get(this.constructor);
     const { typeConfig } = resolveTypeConfig(modelName, config);
@@ -25909,8 +25909,8 @@ var PreTrainedModel = class extends Callable {
    */
   async dispose() {
     const promises = [];
-    for (const session2 of Object.values(this.sessions)) {
-      promises.push(session2.release?.());
+    for (const session of Object.values(this.sessions)) {
+      promises.push(session.release?.());
     }
     return await Promise.all(promises);
   }
@@ -25994,9 +25994,9 @@ var PreTrainedModel = class extends Callable {
         options.progress_callback = new DefaultProgressCallback(progress_callback, files_loading);
       }
     }
-    const sessions = typeConfig.sessions(config, options, textOnly);
+    const sessions2 = typeConfig.sessions(config, options, textOnly);
     const promises = [
-      constructSessions(pretrained_model_name_or_path, sessions, options, typeConfig.cache_sessions)
+      constructSessions(pretrained_model_name_or_path, sessions2, options, typeConfig.cache_sessions)
     ];
     if (typeConfig.optional_configs) {
       promises.push(get_optional_configs(pretrained_model_name_or_path, typeConfig.optional_configs, options));
@@ -26413,8 +26413,8 @@ var PreTrainedModel = class extends Callable {
       if (streamer) {
         streamer.put(generated_input_ids);
       }
-      const stop2 = prepared_stopping_criteria(all_input_ids);
-      if (stop2.every((x) => x)) {
+      const stop = prepared_stopping_criteria(all_input_ids);
+      if (stop.every((x) => x)) {
         break;
       }
       model_inputs = this._update_model_kwargs_for_generation({
@@ -26463,8 +26463,8 @@ var PreTrainedModel = class extends Callable {
     if (!Object.hasOwn(this.sessions, sessionName)) {
       throw new Error(`Model does not have a ${sessionName} session.`);
     }
-    const session2 = this.sessions[sessionName];
-    const output = await sessionRun(session2, pick(inputs, session2.inputNames));
+    const session = this.sessions[sessionName];
+    const output = await sessionRun(session, pick(inputs, session.inputNames));
     return output[outputName];
   }
   /**
@@ -26512,28 +26512,28 @@ async function seq2seq_forward(self2, model_inputs) {
   return await decoder_forward(self2, other_decoder_inputs, true);
 }
 async function encoder_forward(self2, model_inputs) {
-  const session2 = self2.sessions["model"];
-  const encoderFeeds = pick(model_inputs, session2.inputNames);
-  if (session2.inputNames.includes("inputs_embeds") && !encoderFeeds.inputs_embeds) {
+  const session = self2.sessions["model"];
+  const encoderFeeds = pick(model_inputs, session.inputNames);
+  if (session.inputNames.includes("inputs_embeds") && !encoderFeeds.inputs_embeds) {
     if (!model_inputs.input_ids) {
       throw new Error("Both `input_ids` and `inputs_embeds` are missing in the model inputs.");
     }
     encoderFeeds.inputs_embeds = await self2.encode_text({ input_ids: model_inputs.input_ids });
   }
-  if (session2.inputNames.includes("token_type_ids") && !encoderFeeds.token_type_ids) {
+  if (session.inputNames.includes("token_type_ids") && !encoderFeeds.token_type_ids) {
     if (!encoderFeeds.input_ids) {
       throw new Error("Both `input_ids` and `token_type_ids` are missing in the model inputs.");
     }
     encoderFeeds.token_type_ids = zeros_like(encoderFeeds.input_ids);
   }
-  if (session2.inputNames.includes("pixel_mask") && !encoderFeeds.pixel_mask) {
+  if (session.inputNames.includes("pixel_mask") && !encoderFeeds.pixel_mask) {
     if (!encoderFeeds.pixel_values) {
       throw new Error("Both `pixel_values` and `pixel_mask` are missing in the model inputs.");
     }
     const dims = encoderFeeds.pixel_values.dims;
     encoderFeeds.pixel_mask = ones([dims[0], dims[2], dims[3]]);
   }
-  return await sessionRun(session2, encoderFeeds);
+  return await sessionRun(session, encoderFeeds);
 }
 async function auto_encoder_forward(self2, model_inputs) {
   const encoded = await self2.encode(model_inputs);
@@ -26584,7 +26584,7 @@ function addPastKeyValues(self2, decoderFeeds, pastKeyValues) {
     Object.assign(decoderFeeds, pastKeyValues);
     return pastKeyValues;
   }
-  const session2 = self2.sessions["decoder_model_merged"] ?? self2.sessions["model"];
+  const session = self2.sessions["decoder_model_merged"] ?? self2.sessions["model"];
   const batch_size = (decoderFeeds[self2.main_input_name] ?? decoderFeeds.attention_mask)?.dims?.[0] ?? 1;
   const names = getCacheNames(self2.config);
   const num_heads = self2.config?.normalized_config?.num_heads;
@@ -26593,7 +26593,7 @@ function addPastKeyValues(self2, decoderFeeds, pastKeyValues) {
     symbols["batch_size x num_heads"] = batch_size * num_heads;
   }
   const entries = /* @__PURE__ */ Object.create(null);
-  for (const meta of session2.inputMetadata) {
+  for (const meta of session.inputMetadata) {
     if (!names.has(meta.name)) continue;
     const shape = resolveCacheShape(meta.shape, symbols);
     const size = shape.reduce((a, b) => a * b, 1);
@@ -26610,27 +26610,27 @@ function addPastKeyValues(self2, decoderFeeds, pastKeyValues) {
 }
 function setNumLogitsToKeep(self2, model_inputs, value) {
   if (model_inputs.num_logits_to_keep) return;
-  const session2 = self2.sessions["decoder_model_merged"] ?? self2.sessions["model"];
-  if (session2?.inputNames.includes("num_logits_to_keep")) {
+  const session = self2.sessions["decoder_model_merged"] ?? self2.sessions["model"];
+  if (session?.inputNames.includes("num_logits_to_keep")) {
     model_inputs.num_logits_to_keep = new Tensor22("int64", [value], []);
   }
 }
 async function decoder_forward(self2, model_inputs, is_encoder_decoder = false) {
-  const session2 = self2.sessions[is_encoder_decoder ? "decoder_model_merged" : "model"];
+  const session = self2.sessions[is_encoder_decoder ? "decoder_model_merged" : "model"];
   const { past_key_values, ...new_model_inputs } = model_inputs;
-  if (session2.inputNames.includes("use_cache_branch")) {
+  if (session.inputNames.includes("use_cache_branch")) {
     new_model_inputs.use_cache_branch = boolTensor(
       past_key_values != null && Object.keys(past_key_values).length > 0
     );
   }
-  if (session2.inputNames.includes("position_ids") && new_model_inputs.attention_mask && !new_model_inputs.position_ids) {
+  if (session.inputNames.includes("position_ids") && new_model_inputs.attention_mask && !new_model_inputs.position_ids) {
     const start_index = ["paligemma", "gemma3_text", "gemma3"].includes(self2.config.model_type) ? 1 : 0;
     new_model_inputs.position_ids = create_position_ids(new_model_inputs, past_key_values, start_index);
   }
   setNumLogitsToKeep(self2, new_model_inputs, 0n);
   addPastKeyValues(self2, new_model_inputs, past_key_values);
-  const fixed = pick(new_model_inputs, session2.inputNames);
-  return await sessionRun(session2, fixed);
+  const fixed = pick(new_model_inputs, session.inputNames);
+  return await sessionRun(session, fixed);
 }
 async function generic_text_to_text_forward(self2, {
   // Generic parameters:
@@ -26744,10 +26744,10 @@ function cumsum_masked_fill(attention_mask, start_index = 0) {
   const attn_mask_data = attention_mask.data;
   const data = new BigInt64Array(attn_mask_data.length);
   for (let i = 0; i < bz; ++i) {
-    const start2 = i * seq_len;
+    const start = i * seq_len;
     let sum = BigInt(start_index);
     for (let j2 = 0; j2 < seq_len; ++j2) {
-      const index = start2 + j2;
+      const index = start + j2;
       if (attn_mask_data[index] === 0n) {
         data[index] = BigInt(1);
       } else {
@@ -29217,8 +29217,8 @@ var Qwen2VLForConditionalGeneration = class extends Qwen2VLPreTrainedModel {
     if (!model_inputs.attention_mask || model_inputs.position_ids) {
       return model_inputs;
     }
-    const session2 = this.sessions["decoder_model_merged"] ?? this.sessions["model"];
-    if (!session2.inputNames.includes("position_ids")) {
+    const session = this.sessions["decoder_model_merged"] ?? this.sessions["model"];
+    if (!session.inputNames.includes("position_ids")) {
       return model_inputs;
     }
     if (!model_inputs.past_key_values) {
@@ -30055,18 +30055,18 @@ var MultiModalityCausalLM = class extends MultiModalityPreTrainedModel {
     const mode = this._generation_mode ?? "text";
     let output_1;
     if (mode === "text" || !model_inputs.past_key_values) {
-      const session2 = this.sessions["prepare_inputs_embeds"];
-      const prep_inputs = pick(model_inputs, session2.inputNames);
-      output_1 = await sessionRun(session2, prep_inputs);
+      const session = this.sessions["prepare_inputs_embeds"];
+      const prep_inputs = pick(model_inputs, session.inputNames);
+      output_1 = await sessionRun(session, prep_inputs);
     } else {
-      const session2 = this.sessions["gen_img_embeds"];
+      const session = this.sessions["gen_img_embeds"];
       const prep_inputs = pick(
         {
           image_ids: model_inputs.input_ids
         },
-        session2.inputNames
+        session.inputNames
       );
-      output_1 = await sessionRun(session2, prep_inputs);
+      output_1 = await sessionRun(session, prep_inputs);
     }
     const input_2 = { ...model_inputs, ...output_1 };
     const output_2 = await decoder_forward(this, input_2);
@@ -31461,9 +31461,9 @@ var VoxtralRealtimeForConditionalGeneration = class extends VoxtralRealtimePreTr
     }
     const decoder_feeds = { inputs_embeds, ...kwargs };
     addPastKeyValues(this, decoder_feeds, past_key_values);
-    const session2 = this.sessions["decoder_model_merged"];
-    const fixed = pick(decoder_feeds, session2.inputNames);
-    return await sessionRun(session2, fixed);
+    const session = this.sessions["decoder_model_merged"];
+    const fixed = pick(decoder_feeds, session.inputNames);
+    return await sessionRun(session, fixed);
   }
   async generate({ input_features, stopping_criteria: userStoppingCriteria, ...kwargs }) {
     if (!input_features) {
@@ -33069,16 +33069,16 @@ function groupEntities(tokens, ids, tokenizer) {
       openTag = prefix === "S" ? null : tag;
     }
   }
-  return groups.map(({ tag, start: start2, end }) => {
+  return groups.map(({ tag, start, end }) => {
     let scoreSum = 0;
     const groupIds = [];
-    for (let i = start2; i < end; ++i) {
+    for (let i = start; i < end; ++i) {
       scoreSum += tokens[i].score;
       groupIds.push(ids[tokens[i].index]);
     }
     return {
       entity_group: tag,
-      score: scoreSum / (end - start2),
+      score: scoreSum / (end - start),
       word: tokenizer.decode(groupIds, { skip_special_tokens: true })
     };
   });
@@ -33106,25 +33106,25 @@ Pipeline {
           x == sep_token_id
         )
       );
-      const start2 = start_logits[j2].tolist();
+      const start = start_logits[j2].tolist();
       const end = end_logits[j2].tolist();
-      for (let i = 1; i < start2.length; ++i) {
+      for (let i = 1; i < start.length; ++i) {
         if (attention_mask[j2] == 0 || // is part of padding
         i <= sepIndex || // is before the sep_token
         all_special_ids.findIndex((x) => x == ids[i]) !== -1) {
-          start2[i] = -Infinity;
+          start[i] = -Infinity;
           end[i] = -Infinity;
         }
       }
-      const start_scores = softmax(start2).map((x, i) => [x, i]);
+      const start_scores = softmax(start).map((x, i) => [x, i]);
       const end_scores = softmax(end).map((x, i) => [x, i]);
       start_scores[0][0] = 0;
       end_scores[0][0] = 0;
       const options = product(start_scores, end_scores).filter((x) => x[0][1] <= x[1][1]).map((x) => [x[0][1], x[1][1], x[0][0] * x[1][0]]).sort((a, b) => b[2] - a[2]);
       const sampleResults = [];
       for (let k = 0; k < Math.min(options.length, top_k); ++k) {
-        const [start22, end2, score] = options[k];
-        const answer_tokens = ids.slice(start22, end2 + 1);
+        const [start2, end2, score] = options[k];
+        const answer_tokens = ids.slice(start2, end2 + 1);
         const answer = this.tokenizer.decode(answer_tokens, {
           skip_special_tokens: true
         });
@@ -33729,8 +33729,8 @@ Pipeline {
     const results = [];
     for (let i = 0; i < batch_size; ++i) {
       const length = durationsData ? Math.min(Math.ceil(durationsData[i]), waveformLength) : waveformLength;
-      const start2 = i * waveformLength;
-      results.push(new RawAudio(waveformData.slice(start2, start2 + length), sampling_rate));
+      const start = i * waveformLength;
+      results.push(new RawAudio(waveformData.slice(start, start + length), sampling_rate));
     }
     return Array.isArray(text_inputs) ? results : results[0];
   }
@@ -35213,11 +35213,10 @@ function makeVad(sampleRate, settings = {}) {
   };
 }
 function resampleTo16k(samples, rate) {
-  if (rate === 16e3) return samples;
   const ratio = rate / 16e3;
   const n = Math.floor(samples.length / ratio);
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
+  const out = rate === 16e3 ? Float32Array.from(samples) : new Float32Array(n);
+  for (let i = 0; rate !== 16e3 && i < n; i++) {
     const a = Math.floor(i * ratio);
     const b = Math.min(samples.length, Math.floor((i + 1) * ratio));
     let s = 0;
@@ -35253,56 +35252,223 @@ function toWav(f32) {
   return new Blob([buf], { type: "audio/wav" });
 }
 
+// src/lib/stream.js
+async function resolveStreamUrls(mount) {
+  const urls = [];
+  try {
+    const r = await fetch(`https://www.liveatc.net/play/${encodeURIComponent(mount)}.pls`, { cache: "no-store" });
+    if (r.ok) {
+      const txt = await r.text();
+      for (const m of txt.matchAll(/^File\d+=(.+)$/gim)) urls.push(m[1].trim());
+    }
+  } catch {
+  }
+  urls.push(`https://d.liveatc.net/${mount}`, `http://d.liveatc.net/${mount}`);
+  const out = [];
+  for (const u of urls) {
+    const https = u.replace(/^http:/, "https:");
+    if (!out.includes(https)) out.push(https);
+    if (!out.includes(u)) out.push(u);
+  }
+  return out;
+}
+function lastFrameStart(buf, from) {
+  for (let i = buf.length - 4; i > from; i--) {
+    if (buf[i] === 255 && (buf[i + 1] & 224) === 224) {
+      const b2 = buf[i + 2];
+      const bitrateIdx = b2 >> 4;
+      const srIdx = b2 >> 2 & 3;
+      if (bitrateIdx !== 15 && bitrateIdx !== 0 && srIdx !== 3 || (buf[i + 1] & 246) === 240) return i;
+    }
+  }
+  return -1;
+}
+var decodeCtx = () => new OfflineAudioContext(1, 1, 16e3);
+async function decodeChunk(bytes) {
+  const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const audio = await decodeCtx().decodeAudioData(ab);
+  const ch0 = audio.getChannelData(0);
+  if (audio.numberOfChannels === 1) return ch0;
+  const ch1 = audio.getChannelData(1);
+  const out = new Float32Array(ch0.length);
+  for (let i = 0; i < out.length; i++) out[i] = (ch0[i] + ch1[i]) / 2;
+  return out;
+}
+function openStream(mount, { onPcm, onStatus }) {
+  let stopped = false;
+  let ctrl = null;
+  let attempt = 0;
+  const CHUNK_BYTES = 8 * 1024;
+  async function runOnce() {
+    const urls = await resolveStreamUrls(mount);
+    let lastErr = "no stream URL";
+    for (const url of urls) {
+      if (stopped) return;
+      ctrl = new AbortController();
+      try {
+        const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+        if (!res.ok || !res.body) {
+          lastErr = `HTTP ${res.status}`;
+          continue;
+        }
+        onStatus({ state: "listening", detail: "Connected" });
+        attempt = 0;
+        const reader = res.body.getReader();
+        let buf = new Uint8Array(0);
+        let started = false;
+        for (; ; ) {
+          const { value, done } = await reader.read();
+          if (done || stopped) {
+            if (done && buf.length > 512) {
+              try {
+                onPcm(await decodeChunk(buf));
+              } catch {
+              }
+            }
+            break;
+          }
+          const merged = new Uint8Array(buf.length + value.length);
+          merged.set(buf);
+          merged.set(value, buf.length);
+          buf = merged;
+          if (buf.length < CHUNK_BYTES) continue;
+          let start = 0;
+          if (!started) {
+            for (let i = 0; i < buf.length - 1; i++) if (buf[i] === 255 && (buf[i + 1] & 224) === 224) {
+              start = i;
+              break;
+            }
+            started = true;
+          }
+          const cut = lastFrameStart(buf, start + 1);
+          if (cut <= start) continue;
+          const piece = buf.subarray(start, cut);
+          buf = buf.slice(cut);
+          try {
+            onPcm(await decodeChunk(piece));
+          } catch (e) {
+          }
+        }
+        lastErr = "stream ended";
+      } catch (e) {
+        if (stopped) return;
+        lastErr = e?.message || String(e);
+      }
+    }
+    throw new Error(lastErr);
+  }
+  (async () => {
+    while (!stopped) {
+      try {
+        await runOnce();
+      } catch (e) {
+        if (stopped) break;
+        attempt++;
+        const wait = Math.min(60, 2 ** Math.min(attempt, 6));
+        onStatus({ state: "reconnecting", detail: `${e.message} \xB7 retrying in ${wait}s` });
+        await new Promise((r) => setTimeout(r, wait * 1e3));
+      }
+    }
+  })();
+  return { stop() {
+    stopped = true;
+    try {
+      ctrl?.abort();
+    } catch {
+    }
+  } };
+}
+
 // src/ext/offscreen.js
 env2.allowLocalModels = false;
 env2.useBrowserCache = true;
 env2.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL("vendor/");
-var session = null;
+var sessions = /* @__PURE__ */ new Map();
+var queue = [];
+var busy = false;
 var asr = null;
 var asrModel = null;
-var status = (s) => chrome.runtime.sendMessage({ type: "status", status: s }).catch(() => {
+var loading = null;
+var MAX_QUEUE = 40;
+var send = (m) => chrome.runtime.sendMessage(m).catch(() => {
 });
+var status = (s) => send({ type: "status", status: s });
+var feedStatus = (id, s) => send({ type: "feedStatus", id, status: s });
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.target !== "offscreen") return;
-  if (msg.type === "start") start(msg).catch((e) => status({ state: "error", detail: String(e?.message || e) }));
-  if (msg.type === "stop") stop();
+  const fail = (e) => status({ state: "error", detail: String(e?.message || e) });
+  if (msg.type === "start") startTab(msg).catch(fail);
+  if (msg.type === "startFeeds") startFeeds(msg).catch(fail);
+  if (msg.type === "stopFeed") stopSession(msg.id);
+  if (msg.type === "stop") stopAll();
 });
 async function loadModel(model) {
   if (asr && asrModel === model) return asr;
-  const progress = {};
-  const cb = (p) => {
-    if (p.status === "progress" && p.file) {
-      progress[p.file] = p;
-      const loaded = Object.values(progress).reduce((a, x) => a + (x.loaded || 0), 0);
-      const total = Object.values(progress).reduce((a, x) => a + (x.total || 0), 0);
-      if (total) status({ state: "loading", detail: `Downloading model ${Math.round(loaded / total * 100)}% (first time only)` });
+  if (loading?.model === model) return loading.p;
+  const p = (async () => {
+    const progress = {};
+    const cb = (x) => {
+      if (x.status === "progress" && x.file) {
+        progress[x.file] = x;
+        const loaded = Object.values(progress).reduce((a2, y) => a2 + (y.loaded || 0), 0);
+        const total = Object.values(progress).reduce((a2, y) => a2 + (y.total || 0), 0);
+        if (total) status({ state: "loading", detail: `Downloading model ${Math.round(loaded / total * 100)}% (first time only)` });
+      }
+    };
+    status({ state: "loading", detail: "Loading speech model\u2026" });
+    const tryLoad = (device) => pipeline2("automatic-speech-recognition", model, {
+      device,
+      dtype: device === "webgpu" ? { encoder_model: "fp32", decoder_model_merged: "q4" } : "q8",
+      progress_callback: cb
+    });
+    let a = null;
+    if ("gpu" in navigator) {
+      try {
+        a = await tryLoad("webgpu");
+      } catch (e) {
+        console.warn("WebGPU failed, using WASM", e);
+      }
     }
-  };
-  status({ state: "loading", detail: "Loading speech model\u2026" });
-  const tryLoad = async (device2) => pipeline2("automatic-speech-recognition", model, {
-    device: device2,
-    dtype: device2 === "webgpu" ? { encoder_model: "fp32", decoder_model_merged: "q4" } : "q8",
-    progress_callback: cb
-  });
-  let device = "wasm";
-  if ("gpu" in navigator) {
-    try {
-      asr = await tryLoad("webgpu");
-      device = "webgpu";
-    } catch (e) {
-      console.warn("WebGPU failed, using WASM", e);
-      asr = null;
-    }
+    if (!a) a = await tryLoad("wasm");
+    asr = a;
+    asrModel = model;
+    return a;
+  })();
+  loading = { model, p };
+  try {
+    return await p;
+  } finally {
+    loading = null;
   }
-  if (!asr) asr = await tryLoad("wasm");
-  asrModel = model;
-  console.log("ASR ready on", device);
-  return asr;
 }
-async function start({ streamId, meta, settings }) {
-  if (session) stop();
-  const model = settings?.model || "Xenova/whisper-base.en";
-  await loadModel(model);
+function overall() {
+  const n = sessions.size;
+  if (!n) return status({ state: "idle", detail: "Stopped" });
+  status({ state: "listening", detail: `Recording ${n} feed${n > 1 ? "s" : ""}${queue.length > 3 ? ` \xB7 ${queue.length} calls waiting to transcribe` : ""}` });
+}
+async function startFeeds({ feeds, settings }) {
+  await loadModel(settings?.model || "Xenova/whisper-base.en");
+  for (const f of feeds) {
+    const id = `feed:${f.mount}`;
+    if (sessions.has(id)) continue;
+    const meta = { airport: f.airport, feed: f.mount, facility: f.facility };
+    const s = { id, kind: "feed", meta, settings, vad: makeVad(16e3, settings) };
+    feedStatus(id, { state: "connecting", detail: "Connecting\u2026", count: 0 });
+    const h = openStream(f.mount, {
+      onPcm: (pcm) => {
+        const seg = s.vad.push(pcm);
+        if (seg) enqueue(s, seg);
+      },
+      onStatus: (st) => feedStatus(id, st)
+    });
+    s.stop = () => h.stop();
+    sessions.set(id, s);
+  }
+  overall();
+}
+async function startTab({ streamId, meta, settings }) {
+  stopSession("tab");
+  await loadModel(settings?.model || "Xenova/whisper-base.en");
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: streamId } },
     video: false
@@ -35316,60 +35482,57 @@ async function start({ streamId, meta, settings }) {
   src.connect(proc);
   proc.connect(mute);
   mute.connect(ctx.destination);
-  const s = {
-    stream,
-    ctx,
-    proc,
-    meta,
-    settings,
-    queue: [],
-    busy: false,
-    stopped: false,
-    count: 0,
-    vad: makeVad(ctx.sampleRate, settings)
-  };
-  session = s;
+  const s = { id: "tab", kind: "tab", meta, settings, vad: makeVad(ctx.sampleRate, settings) };
   proc.onaudioprocess = (e) => {
-    if (s.stopped) return;
-    const input = e.inputBuffer.getChannelData(0);
-    const seg = s.vad.push(input);
+    const seg = s.vad.push(e.inputBuffer.getChannelData(0));
     if (seg) enqueue(s, seg);
   };
-  stream.getAudioTracks()[0].addEventListener("ended", () => stop());
-  status({ state: "listening", detail: `Listening to ${meta?.airport || "?"} ${meta?.feed || ""}`.trim() });
-}
-function stop() {
-  const s = session;
-  if (!s) {
-    chrome.runtime.sendMessage({ type: "closed" }).catch(() => {
+  s.stop = () => {
+    try {
+      proc.disconnect();
+    } catch {
+    }
+    stream.getTracks().forEach((t) => t.stop());
+    ctx.close().catch(() => {
     });
-    return;
-  }
-  s.stopped = true;
+  };
+  stream.getAudioTracks()[0].addEventListener("ended", () => stopSession("tab"));
+  sessions.set("tab", s);
+  overall();
+}
+function stopSession(id) {
+  const s = sessions.get(id);
+  if (!s) return;
   const tail = s.vad.flush();
   if (tail) enqueue(s, tail);
   try {
-    s.proc.disconnect();
+    s.stop();
   } catch {
   }
-  s.stream.getTracks().forEach((t) => t.stop());
-  s.ctx.close().catch(() => {
-  });
-  session = null;
-  const wait = () => s.busy || s.queue.length ? setTimeout(wait, 500) : chrome.runtime.sendMessage({ type: "closed" }).catch(() => {
-  });
+  sessions.delete(id);
+  if (s.kind === "feed") feedStatus(id, { state: "idle", detail: "Stopped" });
+  overall();
+  maybeClose();
+}
+function stopAll() {
+  for (const id of [...sessions.keys()]) stopSession(id);
+  maybeClose();
+}
+function maybeClose() {
+  if (sessions.size) return;
+  const wait = () => busy || queue.length ? setTimeout(wait, 500) : send({ type: "closed" });
   wait();
 }
 function enqueue(s, seg) {
-  s.queue.push(seg);
-  if (s.queue.length > 20) s.queue.shift();
-  drain(s);
+  queue.push({ s, seg });
+  if (queue.length > MAX_QUEUE) queue.shift();
+  drain();
 }
-async function drain(s) {
-  if (s.busy) return;
-  s.busy = true;
-  while (s.queue.length) {
-    const seg = s.queue.shift();
+async function drain() {
+  if (busy) return;
+  busy = true;
+  while (queue.length) {
+    const { s, seg } = queue.shift();
     try {
       const audio = resampleTo16k(seg.samples, seg.sampleRate);
       const res = await asr(audio, { chunk_length_s: 30 });
@@ -35383,7 +35546,7 @@ async function drain(s) {
         airport: (meta.airport || "").toUpperCase(),
         feed: meta.feed || "",
         facility: meta.facility || "mixed",
-        source: "capture",
+        source: s.kind === "feed" ? "stream" : "capture",
         model: asrModel,
         durationSec: +(audio.length / 16e3).toFixed(1),
         raw,
@@ -35393,13 +35556,12 @@ async function drain(s) {
       };
       await db.put(tx);
       if (tx.hasAudio) await db.putAudio(tx.id, toWav(audio));
-      s.count++;
-      chrome.runtime.sendMessage({ type: "tx", tx }).catch(() => {
-      });
+      send({ type: "tx", tx, sessionId: s.id });
     } catch (e) {
       console.error(e);
-      status({ state: session ? "listening" : "idle", detail: `Transcribe error: ${e?.message || e}` });
+      status({ state: sessions.size ? "listening" : "idle", detail: `Transcribe error: ${e?.message || e}` });
     }
+    if (queue.length % 5 === 0) overall();
   }
-  s.busy = false;
+  busy = false;
 }

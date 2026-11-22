@@ -11,49 +11,62 @@
     <div id="state" class="pill">idle</div>
   </header>
 
-  <p id="detail" class="detail">Open a LiveATC feed, press play, then Start.</p>
+  <p id="detail" class="detail">Add favorite feeds, then press Start all.</p>
 
-  <div class="grid">
-    <label>Airport (ICAO)<input id="airport" placeholder="KBOS" maxlength="4"></label>
-    <label>Feed<input id="feed" placeholder="kbos_twr"></label>
-    <label>Facility
-      <select id="facility">
-        <option value="mixed" selected>Mixed feed</option>
-        <option value="del">Clearance Delivery</option>
-        <option value="gnd">Ground</option>
-        <option value="twr">Tower</option>
-        <option value="app">Approach/Departure</option>
-        <option value="ctr">Center</option>
-        <option value="atis">ATIS</option>
-        <option value="ctaf">CTAF/UNICOM</option>
-      </select>
-    </label>
-    <label>Speech model
-      <select id="model">
-        <option value="Xenova/whisper-tiny.en">Tiny (fastest, ~40 MB)</option>
-        <option value="Xenova/whisper-base.en" selected>Base (balanced, ~80 MB)</option>
-        <option value="Xenova/whisper-small.en">Small (best, ~250 MB, slower)</option>
-        <option value="custom">Custom Hugging Face ID…</option>
-      </select>
-    </label>
-    <label id="customWrap" class="full hidden">Custom model ID<input id="customModel" placeholder="onnx-community/whisper-base"></label>
+  <div class="row-head">
+    <h3>Favorite feeds</h3>
+    <button id="manage" class="link">Manage…</button>
   </div>
+  <ul id="favs" class="favs"><li class="empty">No favorites yet. Click Manage… to add airports.</li></ul>
+  <button id="addTab" class="wide hidden">★ Add this LiveATC feed to favorites</button>
 
-  <details>
-    <summary>Advanced</summary>
+  <div class="buttons">
+    <button id="startAll" class="primary">Start all</button>
+    <button id="stopAll">Stop all</button>
+  </div>
+  <label class="check"><input id="autoStart" type="checkbox"> Start favorites automatically when Chrome opens</label>
+
+  <details id="settingsBox">
+    <summary>Settings</summary>
     <div class="grid">
+      <label class="full">Speech model
+        <select id="model">
+          <option value="Xenova/whisper-tiny.en">Tiny (fastest, ~40 MB)</option>
+          <option value="Xenova/whisper-base.en" selected>Base (balanced, ~80 MB)</option>
+          <option value="Xenova/whisper-small.en">Small (best, ~250 MB, slower)</option>
+          <option value="custom">Custom Hugging Face ID…</option>
+        </select>
+      </label>
+      <label id="customWrap" class="full hidden">Custom model ID<input id="customModel" placeholder="onnx-community/whisper-base"></label>
       <label>Squelch sensitivity <output id="sensOut">3</output>
         <input id="sensitivity" type="range" min="1.5" max="8" step="0.5" value="3"></label>
       <label>End-of-call gap (ms) <output id="gapOut">700</output>
         <input id="gapMs" type="range" min="300" max="1500" step="50" value="700"></label>
       <label class="check full"><input id="keepAudio" type="checkbox" checked> Keep audio clips (for replay while correcting)</label>
     </div>
+    <p class="hint">Changes apply the next time a feed starts.</p>
   </details>
 
-  <div class="buttons">
-    <button id="start" class="primary">Start listening</button>
-    <button id="stop">Stop</button>
-  </div>
+  <details id="tabBox">
+    <summary>Record this tab instead</summary>
+    <div class="grid">
+      <label>Airport (ICAO)<input id="airport" placeholder="KBOS" maxlength="4"></label>
+      <label>Feed<input id="feed" placeholder="kbos_twr"></label>
+      <label class="full">Facility
+        <select id="facility">
+          <option value="mixed" selected>Mixed feed</option>
+          <option value="del">Clearance Delivery</option>
+          <option value="gnd">Ground</option>
+          <option value="twr">Tower</option>
+          <option value="app">Approach/Departure</option>
+          <option value="ctr">Center</option>
+          <option value="atis">ATIS</option>
+          <option value="ctaf">CTAF/UNICOM</option>
+        </select>
+      </label>
+    </div>
+    <div class="buttons"><button id="start">Record this tab</button></div>
+  </details>
 
   <h3>Latest calls</h3>
   <ul id="recent"><li class="empty">Nothing yet.</li></ul>

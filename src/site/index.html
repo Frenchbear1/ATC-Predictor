@@ -14,6 +14,7 @@
     <button data-view="script">Flight script</button>
     <button data-view="list">Transmissions</button>
     <button data-view="gpt">ChatGPT cleanup</button>
+    <button data-view="feeds" id="feedsTab" class="hidden">Feeds</button>
   </nav>
   <div class="data">
     <span id="count" class="muted"></span>
@@ -100,6 +101,33 @@
         <textarea id="gReply" placeholder='[{"n":1,"text":"...","speaker":"atc","phase":"taxi-out", ...}]'></textarea>
         <button id="gApply" class="primary">Apply</button>
         <p id="gResult"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-feeds" class="view hidden">
+    <div class="viewhead row">
+      <div><h2>Favorite feeds</h2>
+        <p class="muted">These record in the background, with no tabs or windows needed. Each feed is transcribed on your laptop, so 2–4 at a time is a realistic limit.</p></div>
+      <div class="actions">
+        <button id="fdStartAll" class="primary">Start all</button>
+        <button id="fdStopAll">Stop all</button>
+      </div>
+    </div>
+    <label class="check"><input id="fdAuto" type="checkbox"> Start favorites automatically when Chrome opens</label>
+    <div id="favTable" class="favtable"></div>
+
+    <div class="gpt" style="margin-top:18px">
+      <div class="card">
+        <h3>Find feeds for an airport</h3>
+        <div class="inline"><input id="fdIcao" placeholder="KBOS" maxlength="4"><button id="fdFind" class="primary">Find</button></div>
+        <div id="fdResults" class="muted">Type an ICAO code and press Find.</div>
+      </div>
+      <div class="card">
+        <h3>Add a feed by link or name</h3>
+        <p class="muted" style="margin:0">Paste a LiveATC player link (…hlisten.php?mount=kbos_twr…), a .pls link, or just the feed name.</p>
+        <div class="inline"><input id="fdManual" placeholder="kbos_twr"><button id="fdAdd">Add</button></div>
+        <p id="fdMsg"></p>
       </div>
     </div>
   </section>

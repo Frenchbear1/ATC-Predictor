@@ -1,13 +1,38 @@
 {
   "manifest_version": 3,
   "name": "ATC Predictor",
-  "version": "0.1.0",
-  "description": "Transcribes the LiveATC feed you're listening to, on your own computer, and groups calls into scenarios by airport and phase of flight.",
-  "action": { "default_popup": "popup.html", "default_title": "ATC Predictor", "default_icon": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" } },
-  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["tabCapture", "offscreen", "storage", "unlimitedStorage"],
-  "host_permissions": ["https://huggingface.co/*", "https://*.hf.co/*", "https://*.huggingface.co/*"],
+  "version": "0.2.0",
+  "description": "Records your favorite LiveATC feeds in the background, transcribes them on your own computer, and groups calls into scenarios by airport and phase of flight.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ATC Predictor",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "tabCapture",
+    "offscreen",
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://huggingface.co/*",
+    "https://*.hf.co/*",
+    "https://*.huggingface.co/*",
+    "https://*.liveatc.net/*",
+    "http://*.liveatc.net/*"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }

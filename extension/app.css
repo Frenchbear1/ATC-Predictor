@@ -108,3 +108,21 @@ pre { white-space: pre-wrap; font-size: 11px; max-height: 300px; overflow: auto;
   .tx .sel { grid-column: 2; justify-content: flex-start; }
   .top { flex-wrap: wrap; }
 }
+
+/* feeds */
+.inline { display: flex; gap: 6px; }
+.inline input { flex: 1; }
+.favtable { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.frow { display: grid; grid-template-columns: 14px 70px 1fr 170px 150px auto; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.frow input, .frow select { padding: 4px 6px; font-size: 13px; }
+.frow .st { font-size: 12px; color: var(--dim); }
+.frow .btns { display: flex; gap: 4px; }
+.frow .btns button { padding: 3px 9px; font-size: 12px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.dot.listening { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.dot.connecting, .dot.reconnecting { background: #f6a821; }
+.dot.error { background: var(--err); }
+.found { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow: auto; }
+.found label { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
+.found small { color: var(--dim); }
+@media (max-width: 900px) { .frow { grid-template-columns: 14px 1fr; } }

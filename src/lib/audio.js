@@ -48,11 +48,10 @@ export function makeVad(sampleRate, settings = {}) {
 }
 
 export function resampleTo16k(samples, rate) {
-  if (rate === 16000) return samples;
   const ratio = rate / 16000;
   const n = Math.floor(samples.length / ratio);
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
+  const out = rate === 16000 ? Float32Array.from(samples) : new Float32Array(n);
+  for (let i = 0; rate !== 16000 && i < n; i++) {
     // box-filter average over the source window (simple anti-alias)
     const a = Math.floor(i * ratio); const b = Math.min(samples.length, Math.floor((i + 1) * ratio));
     let s = 0; for (let j = a; j < b; j++) s += samples[j];
