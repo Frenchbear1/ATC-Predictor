@@ -27,12 +27,17 @@ Personal use only. The favorites mode pulls LiveATC's audio streams directly, wh
 1. Click the **ATC Predictor** icon, then **Manage…** (this opens the **Feeds** tab).
 2. Under **Find feeds for an airport**, type an ICAO code (for example `KBOS`) and click **Find**.
 3. Tick the feeds you want, like Tower and Ground. They appear at the top as favorites. You can also paste a LiveATC link or feed name (like `kbos_twr`) under **Add a feed by link or name**.
+   Or let ChatGPT find them: under **Find feeds with ChatGPT**, type your airports (for example `KBOS, KBED`) and click **Copy prompt**. Paste the prompt into ChatGPT with web search on, then paste its reply into box 2 and click **Add these feeds**. Feeds ChatGPT couldn't confirm are added as *unverified* and left out of **Start all** until you check them with **Listen**.
 4. Check each favorite's **Facility** (Tower, Ground…). It's guessed from the feed name.
 5. Click **Start all**. The first time, the speech model downloads (about 80 MB for Base) and is cached after that.
 
 The feeds record in the background with no tabs, windows or sound. Each favorite gets a green dot when it's connected, and the badge on the icon counts calls. Dropped streams reconnect on their own. Tick **Start favorites automatically when Chrome opens** if you want it to run every time Chrome starts. **Listen** opens the LiveATC player if you want to hear a feed.
 
 Every feed shares one speech model on your laptop, so 2–4 feeds at a time is realistic. If calls pile up ("calls waiting to transcribe" in the popup), run fewer feeds or switch to the **Tiny** model in **Settings**.
+
+### Feeds that share a frequency
+
+LiveATC often has overlapping feeds, like a Tower feed and a combined Del/Gnd/Twr feed that both carry 128.8. Each favorite has a **Frequencies** box, which ChatGPT and **Find** fill in when they can. Shared frequencies are flagged with ⚠. When the same call arrives on two feeds a few seconds apart, it's saved once and tagged "also heard on". A pilot's readback is never merged with the controller's instruction. For older recordings, **Transmissions → Merge duplicates** cleans up copies that are already saved. If one feed fully covers another, you can turn the extra one off to save CPU.
 
 ### Or record the tab you're playing
 

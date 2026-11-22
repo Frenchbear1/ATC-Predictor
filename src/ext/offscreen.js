@@ -7,6 +7,7 @@ import { db, newId } from '../lib/db.js';
 import { parseTransmission, looksLikeJunk } from '../lib/atc.js';
 import { makeVad, resampleTo16k, toWav } from '../lib/audio.js';
 import { openStream } from '../lib/stream.js';
+import { isDuplicate } from '../lib/dedupe.js';
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -19,6 +20,8 @@ let asr = null;
 let asrModel = null;
 let loading = null;
 const MAX_QUEUE = 40;
+const freqMap = {};   // feed mount -> frequencies (for duplicate detection)
+let recentSaved = []; // last ~30 s of saved calls, to catch the same call on two feeds
 
 const send = (m) => chrome.runtime.sendMessage(m).catch(() => {});
 const status = (s) => send({ type: 'status', status: s });
@@ -77,6 +80,7 @@ async function startFeeds({ feeds, settings }) {
     const id = `feed:${f.mount}`;
     if (sessions.has(id)) continue;
     const meta = { airport: f.airport, feed: f.mount, facility: f.facility };
+    freqMap[f.mount] = f.freqs || [];
     const s = { id, kind: 'feed', meta, settings, vad: makeVad(16000, settings) };
     feedStatus(id, { state: 'connecting', detail: 'Connecting…', count: 0 });
     const h = openStream(f.mount, {
@@ -163,7 +167,17 @@ async function drain() {
         facility: meta.facility || 'mixed', source: s.kind === 'feed' ? 'stream' : 'capture', model: asrModel,
         durationSec: +(audio.length / 16000).toFixed(1), raw, text: raw, ...parsed, hasAudio: !!s.settings?.keepAudio,
       };
+      // same call heard on another feed that shares the frequency? merge instead of saving twice
+      recentSaved = recentSaved.filter((r) => Date.now() - r.savedAt < 30000);
+      const dup = recentSaved.find((r) => isDuplicate(tx, r, freqMap));
+      if (dup) {
+        dup.alsoOn = [...new Set([...(dup.alsoOn || []), tx.feed])];
+        const { savedAt, ...row } = dup;
+        await db.put(row);
+        continue;
+      }
       await db.put(tx);
+      recentSaved.push({ ...tx, savedAt: Date.now() });
       if (tx.hasAudio) await db.putAudio(tx.id, toWav(audio));
       send({ type: 'tx', tx, sessionId: s.id });
     } catch (e) {

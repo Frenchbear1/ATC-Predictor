@@ -144,7 +144,10 @@ export async function findFeeds(icao) {
     const row = a.closest('table, tr, div');
     const strong = row?.querySelector('strong, b, h3, h2');
     if (strong) label = strong.textContent.replace(/\s+/g, ' ').trim();
-    feeds.set(mount, { mount, label: label || mount });
+    // frequencies listed in the same feed block (best effort)
+    let block = a.closest('table'); if (block?.parentElement?.closest('table')) block = block.parentElement.closest('table');
+    const freqs = [...new Set(((block || row)?.textContent || '').match(/\b1[1-3]\d\.\d{1,3}\b/g) || [])];
+    feeds.set(mount, { mount, label: label || mount, freqs });
   }
   return [...feeds.values()];
 }

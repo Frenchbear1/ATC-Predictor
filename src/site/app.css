@@ -126,3 +126,9 @@ pre { white-space: pre-wrap; font-size: 11px; max-height: 300px; overflow: auto;
 .found label { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
 .found small { color: var(--dim); }
 @media (max-width: 900px) { .frow { grid-template-columns: 14px 1fr; } }
+
+.frow .warn { color: #f6a821; font-size: 12px; }
+.frow .unv { color: #ff9c99; font-size: 12px; }
+.frow input[data-f="freqs"] { width: 100%; margin-top: 4px; }
+.fgres { font-size: 13px; display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow: auto; }
+.warn { color: #f6a821; }

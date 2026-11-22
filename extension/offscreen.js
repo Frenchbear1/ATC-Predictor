@@ -35379,6 +35379,50 @@ function openStream(mount, { onPcm, onStatus }) {
   } };
 }
 
+// src/lib/dedupe.js
+function normFreq(f) {
+  const m = String(f).match(/(1[1-3]\d)\.?(\d{1,3})?/);
+  if (!m) return null;
+  const n = (m[2] || "0").padEnd(3, "0");
+  return `${m[1]}.${n}`.replace(/0+$/, "").replace(/\.$/, ".0");
+}
+function parseFreqs(input) {
+  if (Array.isArray(input)) return [...new Set(input.map(normFreq).filter(Boolean))];
+  return [...new Set(String(input || "").split(/[^0-9.]+/).map(normFreq).filter(Boolean))];
+}
+function squash(t) {
+  return (t.norm || t.text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+function similarity(a, b) {
+  const sa = squash(a);
+  const sb = squash(b);
+  if (sa.length < 3 || sb.length < 3) return sa === sb ? 1 : 0;
+  const grams = (s) => {
+    const m = /* @__PURE__ */ new Map();
+    for (let i = 0; i < s.length - 2; i++) {
+      const g = s.slice(i, i + 3);
+      m.set(g, (m.get(g) || 0) + 1);
+    }
+    return m;
+  };
+  const ga = grams(sa);
+  const gb = grams(sb);
+  let inter = 0;
+  for (const [g, c] of ga) inter += Math.min(c, gb.get(g) || 0);
+  return 2 * inter / (sa.length - 2 + sb.length - 2);
+}
+function isDuplicate(a, b, freqMap2 = {}, { windowMs = 8e3, minSim = 0.75 } = {}) {
+  if (!a || !b || a.id === b.id) return false;
+  if (a.feed === b.feed) return false;
+  if (a.airport !== b.airport) return false;
+  if (Math.abs(a.ts - b.ts) > windowMs) return false;
+  const fa = parseFreqs(freqMap2[a.feed]);
+  const fb = parseFreqs(freqMap2[b.feed]);
+  if (fa.length && fb.length && !fa.some((x) => fb.includes(x))) return false;
+  if (a.speaker !== "unknown" && b.speaker !== "unknown" && a.speaker !== b.speaker) return false;
+  return similarity(a, b) >= minSim;
+}
+
 // src/ext/offscreen.js
 env2.allowLocalModels = false;
 env2.useBrowserCache = true;
@@ -35390,6 +35434,8 @@ var asr = null;
 var asrModel = null;
 var loading = null;
 var MAX_QUEUE = 40;
+var freqMap = {};
+var recentSaved = [];
 var send = (m) => chrome.runtime.sendMessage(m).catch(() => {
 });
 var status = (s) => send({ type: "status", status: s });
@@ -35452,6 +35498,7 @@ async function startFeeds({ feeds, settings }) {
     const id = `feed:${f.mount}`;
     if (sessions.has(id)) continue;
     const meta = { airport: f.airport, feed: f.mount, facility: f.facility };
+    freqMap[f.mount] = f.freqs || [];
     const s = { id, kind: "feed", meta, settings, vad: makeVad(16e3, settings) };
     feedStatus(id, { state: "connecting", detail: "Connecting\u2026", count: 0 });
     const h = openStream(f.mount, {
@@ -35554,7 +35601,16 @@ async function drain() {
         ...parsed,
         hasAudio: !!s.settings?.keepAudio
       };
+      recentSaved = recentSaved.filter((r) => Date.now() - r.savedAt < 3e4);
+      const dup = recentSaved.find((r) => isDuplicate(tx, r, freqMap));
+      if (dup) {
+        dup.alsoOn = [.../* @__PURE__ */ new Set([...dup.alsoOn || [], tx.feed])];
+        const { savedAt, ...row } = dup;
+        await db.put(row);
+        continue;
+      }
       await db.put(tx);
+      recentSaved.push({ ...tx, savedAt: Date.now() });
       if (tx.hasAudio) await db.putAudio(tx.id, toWav(audio));
       send({ type: "tx", tx, sessionId: s.id });
     } catch (e) {

@@ -767,6 +767,119 @@ function applyReply(txs, map, raw) {
   }
   return { updated, junk, missing };
 }
+var FACILITY_CODES = ["del", "gnd", "twr", "app", "ctr", "atis", "ctaf", "mixed"];
+function buildFeedPrompt(airports, wants = "") {
+  const list = airports.map((a) => a.trim().toUpperCase()).filter(Boolean);
+  return `Please look up the live air traffic control audio feeds on LiveATC.net for these airports: ${list.join(", ")}.
+${wants ? `I mostly want: ${wants}.
+` : ""}Search the web / liveatc.net (each airport has a page like https://www.liveatc.net/search/?icao=kbos).
+
+For every feed you find, give me:
+- "mount": the feed's ID exactly as LiveATC uses it. It's the value after "mount=" in the player link (https://www.liveatc.net/hlisten.php?mount=kbos_twr&icao=kbos) or the name of the .pls file (https://www.liveatc.net/play/kbos_twr.pls). Lowercase, e.g. "kbos_twr".
+- "airport": the 4-letter ICAO code.
+- "label": the feed's name on LiveATC, e.g. "Boston Tower" or "KBOS Del/Gnd/Twr".
+- "facility": one of ${FACILITY_CODES.join(", ")} ("mixed" if the feed combines several facilities).
+- "freqs": every frequency the feed covers, as strings like "128.8". This matters: different feeds often share a frequency, and I use it to remove duplicate calls.
+- "verified": true only if you actually saw this mount on LiveATC; false if you're guessing.
+
+Don't make up mounts. If you can't browse, say so and set "verified": false.
+Reply with ONLY a JSON array (no prose, no code fence), like:
+[{"mount":"kbos_twr","airport":"KBOS","label":"Boston Tower","facility":"twr","freqs":["128.8","132.225"],"verified":true}]`;
+}
+function parseFeedReply(raw) {
+  const rows = parseReply(raw);
+  const out = [];
+  for (const r of rows) {
+    const mount = String(r.mount || r.id || "").toLowerCase().replace(/^.*mount=/, "").replace(/[&?].*$/, "").replace(/\.pls$/, "").replace(/[^a-z0-9_.-]/g, "");
+    if (!mount) continue;
+    out.push({
+      mount,
+      airport: String(r.airport || mount.slice(0, 4)).toUpperCase().slice(0, 4),
+      label: String(r.label || r.name || "").trim(),
+      facility: FACILITY_CODES.includes(r.facility) ? r.facility : null,
+      freqs: Array.isArray(r.freqs || r.frequencies) ? (r.freqs || r.frequencies).map(String) : String(r.freqs || r.frequencies || "").split(/[,;\s]+/).filter(Boolean),
+      verified: r.verified !== false
+    });
+  }
+  return out;
+}
+
+// src/lib/dedupe.js
+function normFreq(f) {
+  const m = String(f).match(/(1[1-3]\d)\.?(\d{1,3})?/);
+  if (!m) return null;
+  const n = (m[2] || "0").padEnd(3, "0");
+  return `${m[1]}.${n}`.replace(/0+$/, "").replace(/\.$/, ".0");
+}
+function parseFreqs(input) {
+  if (Array.isArray(input)) return [...new Set(input.map(normFreq).filter(Boolean))];
+  return [...new Set(String(input || "").split(/[^0-9.]+/).map(normFreq).filter(Boolean))];
+}
+function overlaps(feeds) {
+  const out = [];
+  for (let i = 0; i < feeds.length; i++) {
+    for (let j = i + 1; j < feeds.length; j++) {
+      const fa = parseFreqs(feeds[i].freqs);
+      const fb = parseFreqs(feeds[j].freqs);
+      const shared = fa.filter((x) => fb.includes(x));
+      if (shared.length) out.push({ a: feeds[i].mount, b: feeds[j].mount, freqs: shared });
+    }
+  }
+  return out;
+}
+function squash(t) {
+  return (t.norm || t.text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+function similarity(a, b) {
+  const sa = squash(a);
+  const sb = squash(b);
+  if (sa.length < 3 || sb.length < 3) return sa === sb ? 1 : 0;
+  const grams = (s) => {
+    const m = /* @__PURE__ */ new Map();
+    for (let i = 0; i < s.length - 2; i++) {
+      const g = s.slice(i, i + 3);
+      m.set(g, (m.get(g) || 0) + 1);
+    }
+    return m;
+  };
+  const ga = grams(sa);
+  const gb = grams(sb);
+  let inter = 0;
+  for (const [g, c] of ga) inter += Math.min(c, gb.get(g) || 0);
+  return 2 * inter / (sa.length - 2 + sb.length - 2);
+}
+function isDuplicate(a, b, freqMap = {}, { windowMs = 8e3, minSim = 0.75 } = {}) {
+  if (!a || !b || a.id === b.id) return false;
+  if (a.feed === b.feed) return false;
+  if (a.airport !== b.airport) return false;
+  if (Math.abs(a.ts - b.ts) > windowMs) return false;
+  const fa = parseFreqs(freqMap[a.feed]);
+  const fb = parseFreqs(freqMap[b.feed]);
+  if (fa.length && fb.length && !fa.some((x) => fb.includes(x))) return false;
+  if (a.speaker !== "unknown" && b.speaker !== "unknown" && a.speaker !== b.speaker) return false;
+  return similarity(a, b) >= minSim;
+}
+function findDuplicates(txs, freqMap = {}) {
+  const sorted = [...txs].sort((a, b) => a.ts - b.ts);
+  const drop = /* @__PURE__ */ new Set();
+  const keep = /* @__PURE__ */ new Map();
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i];
+    if (drop.has(a.id)) continue;
+    for (let j = i + 1; j < sorted.length && sorted[j].ts - a.ts <= 8e3; j++) {
+      const b = sorted[j];
+      if (drop.has(b.id)) continue;
+      if (!isDuplicate(a, b, freqMap)) continue;
+      const [winner, loser] = b.cleaned && !a.cleaned ? [b, a] : [a, b];
+      drop.add(loser.id);
+      const also = keep.get(winner.id) || [...winner.alsoOn || []];
+      for (const f of [loser.feed, ...loser.alsoOn || []]) if (f && f !== winner.feed && !also.includes(f)) also.push(f);
+      keep.set(winner.id, also);
+      if (winner === b) break;
+    }
+  }
+  return { keep, drop: [...drop] };
+}
 
 // src/lib/sample.js
 var CS = [
@@ -867,7 +980,10 @@ async function findFeeds(icao) {
     const row = a.closest("table, tr, div");
     const strong = row?.querySelector("strong, b, h3, h2");
     if (strong) label = strong.textContent.replace(/\s+/g, " ").trim();
-    feeds.set(mount, { mount, label: label || mount });
+    let block = a.closest("table");
+    if (block?.parentElement?.closest("table")) block = block.parentElement.closest("table");
+    const freqs = [...new Set(((block || row)?.textContent || "").match(/\b1[1-3]\d\.\d{1,3}\b/g) || [])];
+    feeds.set(mount, { mount, label: label || mount, freqs });
   }
   return [...feeds.values()];
 }
@@ -1030,7 +1146,8 @@ function renderList() {
     <div class="when">${fmtTime(t.ts)}<br>${esc(t.airport)} \xB7 ${esc(t.facility)}</div>
     <div><div class="txt" contenteditable="plaintext-only" spellcheck="false" data-edit>${esc(t.text)}</div>
       ${t.raw && t.raw !== t.text ? `<div class="raw">heard: ${esc(t.raw)}</div>` : ""}
-      ${t.meaning ? `<div class="raw">means: ${esc(t.meaning)}</div>` : ""}</div>
+      ${t.meaning ? `<div class="raw">means: ${esc(t.meaning)}</div>` : ""}
+      ${t.alsoOn?.length ? `<div class="raw">also heard on: ${esc(t.alsoOn.join(", "))}</div>` : ""}</div>
     <div class="sel">${t.hasAudio ? `<button class="play" data-play="${t.id}">\u25B6</button>` : ""}
       ${sel("speaker", t.speaker, [["atc", "ATC"], ["pilot", "Pilot"], ["unknown", "?"]])}
       ${sel("phase", t.phase, PHASES.map((p) => [p, PHASE_LABELS[p]]))}
@@ -1180,6 +1297,18 @@ $("more").onclick = () => {
   listLimit += 150;
   render();
 };
+$("dedupe").onclick = async () => {
+  const freqMap = {};
+  if (IN_EXT) for (const f of (await chrome.storage.local.get("favorites")).favorites || []) freqMap[f.mount] = f.freqs || [];
+  const { keep, drop } = findDuplicates(all, freqMap);
+  if (!drop.length) return toast("No duplicates found");
+  if (!confirm(`Found ${drop.length} calls that were recorded twice on feeds sharing a frequency. Merge them? The extra copies are deleted.`)) return;
+  const upd = all.filter((t) => keep.has(t.id)).map((t) => ({ ...t, alsoOn: keep.get(t.id) }));
+  await db.putMany(upd);
+  await db.remove(drop);
+  await load();
+  toast(`Merged ${drop.length} duplicates`);
+};
 ["gOnlyRaw", "gUseFilter", "gSize"].forEach((id) => $(id).addEventListener("input", renderGpt));
 $("gCopy").onclick = async () => {
   const b = gptBatch();
@@ -1283,12 +1412,12 @@ $("clearBtn").onclick = async () => {
 };
 var getFavs = async () => (await chrome.storage.local.get("favorites")).favorites || [];
 var setFavs = (favorites) => chrome.storage.local.set({ favorites });
-async function addFav(mount, label = "") {
+async function addFav(mount, label = "", freqs = []) {
   mount = mountFromInput(mount);
   if (!mount) return false;
   const favs = await getFavs();
   if (favs.some((f) => f.mount === mount)) return false;
-  favs.push({ mount, airport: airportFromMount(mount), facility: facilityFromFeed(`${mount} ${label}`), label, enabled: true });
+  favs.push({ mount, airport: airportFromMount(mount), facility: facilityFromFeed(`${mount} ${label}`), label, freqs: parseFreqs(freqs), enabled: true });
   await setFavs(favs);
   return true;
 }
@@ -1304,13 +1433,18 @@ async function renderFeeds() {
   }
   const counts = {};
   for (const t of all) counts[t.feed] = (counts[t.feed] || 0) + 1;
+  const ov = overlaps(favs);
+  const ovFor = (m) => ov.filter((o) => o.a === m || o.b === m).map((o) => `${o.freqs.join(", ")} also on ${o.a === m ? o.b : o.a}`);
   $("favTable").innerHTML = favs.map((f) => {
     const fs = feedState[`feed:${f.mount}`] || { state: "idle" };
     const on = fs.state && fs.state !== "idle";
     return `<div class="frow" data-mount="${esc(f.mount)}">
       <span class="dot ${esc(fs.state || "idle")}" title="${esc(fs.detail || "")}"></span>
       <input data-f="airport" value="${esc(f.airport)}" maxlength="4" title="Airport ICAO">
-      <div><input data-f="label" value="${esc(f.label)}" placeholder="${esc(f.mount)}" title="Label"><div class="st">${esc(f.mount)} \xB7 ${counts[f.mount] || 0} calls saved${on ? ` \xB7 ${esc(fs.detail || fs.state)}${fs.count ? ` \xB7 ${fs.count} this session` : ""}` : ""}</div></div>
+      <div><input data-f="label" value="${esc(f.label)}" placeholder="${esc(f.mount)}" title="Label"><div class="st">${esc(f.mount)} \xB7 ${counts[f.mount] || 0} calls saved${on ? ` \xB7 ${esc(fs.detail || fs.state)}${fs.count ? ` \xB7 ${fs.count} this session` : ""}` : ""}</div>
+        <input data-f="freqs" value="${esc(parseFreqs(f.freqs).join(", "))}" placeholder="Frequencies, e.g. 128.8, 121.9" title="Frequencies this feed covers (used to merge duplicate calls)">
+        ${ovFor(f.mount).map((w) => `<div class="warn">\u26A0 Shares ${esc(w)}. The same call on both feeds is saved once.</div>`).join("")}
+        ${f.unverified ? '<div class="unv">Unverified (ChatGPT guessed this one). Press Listen to check it exists, then tick \u201CIn Start all\u201D.</div>' : ""}</div>
       <select data-f="facility">${FACILITIES.map((x) => opt(x, FACILITY_LABELS[x], f.facility)).join("")}</select>
       <label class="check"><input type="checkbox" data-f="enabled" ${f.enabled !== false ? "checked" : ""}> In \u201CStart all\u201D</label>
       <div class="btns"><button data-fa="toggle">${on ? "Stop" : "Start"}</button>
@@ -1327,7 +1461,8 @@ if (IN_EXT) {
     if (!row || !k) return;
     const favs = await getFavs();
     const f = favs.find((x) => x.mount === row.dataset.mount);
-    f[k] = e.target.type === "checkbox" ? e.target.checked : k === "airport" ? e.target.value.toUpperCase() : e.target.value;
+    f[k] = e.target.type === "checkbox" ? e.target.checked : k === "airport" ? e.target.value.toUpperCase() : k === "freqs" ? parseFreqs(e.target.value) : e.target.value;
+    if (k === "enabled" && e.target.checked) delete f.unverified;
     await setFavs(favs);
     toast("Saved. Restart the feed for changes to apply.");
   });
@@ -1368,8 +1503,8 @@ if (IN_EXT) {
         $("fdResults").textContent = "No feeds found for that airport. You can still add one by name on the right.";
         return;
       }
-      $("fdResults").innerHTML = `<div class="found">${feeds.map((f) => `<label><input type="checkbox" data-add="${esc(f.mount)}" data-label="${esc(f.label === f.mount ? "" : f.label)}" ${favs.some((x) => x.mount === f.mount) ? "checked disabled" : ""}>
-        <span>${esc(f.label)} <small>${esc(f.mount)}</small></span></label>`).join("")}</div>`;
+      $("fdResults").innerHTML = `<div class="found">${feeds.map((f) => `<label><input type="checkbox" data-add="${esc(f.mount)}" data-label="${esc(f.label === f.mount ? "" : f.label)}" data-freqs="${esc(f.freqs.join(","))}" ${favs.some((x) => x.mount === f.mount) ? "checked disabled" : ""}>
+        <span>${esc(f.label)} <small>${esc(f.mount)}${f.freqs.length ? ` \xB7 ${esc(f.freqs.join(", "))}` : ""}</small></span></label>`).join("")}</div>`;
     } catch (err) {
       $("fdResults").textContent = err.message;
     }
@@ -1381,7 +1516,7 @@ if (IN_EXT) {
   $("fdResults").addEventListener("change", async (e) => {
     const c = e.target.closest("[data-add]");
     if (!c || !c.checked) return;
-    if (await addFav(c.dataset.add, c.dataset.label)) {
+    if (await addFav(c.dataset.add, c.dataset.label, c.dataset.freqs)) {
       c.disabled = true;
       toast(`Added ${c.dataset.add}`);
       renderFeeds();
@@ -1394,6 +1529,48 @@ if (IN_EXT) {
       $("fdManual").value = "";
       renderFeeds();
     }
+  };
+  $("fgCopy").onclick = async () => {
+    const airports = $("fgAirports").value.split(/[\s,;]+/).filter((x) => /^[a-z0-9]{3,4}$/i.test(x));
+    if (!airports.length) return toast("Type at least one airport code");
+    const prompt = buildFeedPrompt(airports, $("fgWants").value.trim());
+    try {
+      await navigator.clipboard.writeText(prompt);
+      toast("Copied. Paste it into ChatGPT.");
+    } catch {
+      $("fgReply").value = prompt;
+      toast("Clipboard blocked; the prompt is in the box. Copy it from there.");
+    }
+  };
+  $("fgApply").onclick = async () => {
+    let rows;
+    try {
+      rows = parseFeedReply($("fgReply").value);
+    } catch (err) {
+      $("fgResult").innerHTML = `<span class="bad">${esc(err.message)}</span>`;
+      return;
+    }
+    const favs = await getFavs();
+    const lines = [];
+    for (const r of rows) {
+      const ex = favs.find((f) => f.mount === r.mount);
+      if (ex) {
+        const freqs = parseFreqs([...ex.freqs || [], ...r.freqs]);
+        const changed = freqs.length !== parseFreqs(ex.freqs).length || !ex.label && r.label;
+        ex.freqs = freqs;
+        ex.label ||= r.label;
+        lines.push(`<span class="muted">${esc(r.mount)}: already a favorite${changed ? " (filled in frequencies/label)" : ""}</span>`);
+        continue;
+      }
+      favs.push({ mount: r.mount, airport: r.airport, label: r.label, facility: r.facility || facilityFromFeed(`${r.mount} ${r.label}`), freqs: parseFreqs(r.freqs), enabled: r.verified, ...r.verified ? {} : { unverified: true } });
+      lines.push(r.verified ? `<span class="ok">Added ${esc(r.airport)} ${esc(r.label || r.mount)} (${esc(r.mount)})</span>` : `<span class="warn">Added ${esc(r.mount)} as unverified (not in Start all)</span>`);
+    }
+    await setFavs(favs);
+    const ov = overlaps(favs);
+    if (ov.length) lines.push(`<span class="muted">${ov.length} pair${ov.length > 1 ? "s" : ""} of feeds share a frequency. Duplicate calls are merged automatically.</span>`);
+    $("fgResult").innerHTML = `<div class="fgres">${lines.join("") || '<span class="bad">No feeds found in that reply.</span>'}</div>`;
+    if (rows.length) $("fgReply").value = "";
+    renderFeeds();
   };
   chrome.storage.onChanged.addListener(() => {
     if (tab === "feeds") renderFeeds();

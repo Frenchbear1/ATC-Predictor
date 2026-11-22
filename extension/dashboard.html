@@ -77,6 +77,7 @@
         <button id="selAll">Select all shown</button>
         <button id="delSel" class="danger">Delete selected</button>
         <button id="reparse">Re-parse shown</button>
+        <button id="dedupe" title="Merge the same call recorded on two feeds that share a frequency">Merge duplicates</button>
       </div>
     </div>
     <div id="list"></div>
@@ -128,6 +129,22 @@
         <p class="muted" style="margin:0">Paste a LiveATC player link (…hlisten.php?mount=kbos_twr…), a .pls link, or just the feed name.</p>
         <div class="inline"><input id="fdManual" placeholder="kbos_twr"><button id="fdAdd">Add</button></div>
         <p id="fdMsg"></p>
+      </div>
+    </div>
+
+    <div class="gpt" style="margin-top:14px">
+      <div class="card">
+        <h3>Find feeds with ChatGPT · 1 · Copy</h3>
+        <label>Airports (ICAO, separated by commas)<input id="fgAirports" placeholder="KBOS, KBED, KPVD"></label>
+        <label>What you want (optional)<input id="fgWants" placeholder="tower, ground and approach"></label>
+        <button id="fgCopy" class="primary">Copy prompt</button>
+        <p class="muted" style="margin:0">Paste it into ChatGPT with web search on, so it can check LiveATC.</p>
+      </div>
+      <div class="card">
+        <h3>2 · Paste ChatGPT's reply</h3>
+        <textarea id="fgReply" style="min-height:120px" placeholder='[{"mount":"kbos_twr","airport":"KBOS","label":"Boston Tower","facility":"twr","freqs":["128.8"],"verified":true}]'></textarea>
+        <button id="fgApply" class="primary">Add these feeds</button>
+        <div id="fgResult"></div>
       </div>
     </div>
   </section>

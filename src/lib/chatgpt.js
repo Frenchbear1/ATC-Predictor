@@ -66,3 +66,42 @@ export function applyReply(txs, map, raw) {
   }
   return { updated, junk, missing };
 }
+
+// ---- feed finder: ask ChatGPT to look up LiveATC feeds for a list of airports ----
+const FACILITY_CODES = ['del', 'gnd', 'twr', 'app', 'ctr', 'atis', 'ctaf', 'mixed'];
+
+export function buildFeedPrompt(airports, wants = '') {
+  const list = airports.map((a) => a.trim().toUpperCase()).filter(Boolean);
+  return `Please look up the live air traffic control audio feeds on LiveATC.net for these airports: ${list.join(', ')}.
+${wants ? `I mostly want: ${wants}.\n` : ''}Search the web / liveatc.net (each airport has a page like https://www.liveatc.net/search/?icao=kbos).
+
+For every feed you find, give me:
+- "mount": the feed's ID exactly as LiveATC uses it. It's the value after "mount=" in the player link (https://www.liveatc.net/hlisten.php?mount=kbos_twr&icao=kbos) or the name of the .pls file (https://www.liveatc.net/play/kbos_twr.pls). Lowercase, e.g. "kbos_twr".
+- "airport": the 4-letter ICAO code.
+- "label": the feed's name on LiveATC, e.g. "Boston Tower" or "KBOS Del/Gnd/Twr".
+- "facility": one of ${FACILITY_CODES.join(', ')} ("mixed" if the feed combines several facilities).
+- "freqs": every frequency the feed covers, as strings like "128.8". This matters: different feeds often share a frequency, and I use it to remove duplicate calls.
+- "verified": true only if you actually saw this mount on LiveATC; false if you're guessing.
+
+Don't make up mounts. If you can't browse, say so and set "verified": false.
+Reply with ONLY a JSON array (no prose, no code fence), like:
+[{"mount":"kbos_twr","airport":"KBOS","label":"Boston Tower","facility":"twr","freqs":["128.8","132.225"],"verified":true}]`;
+}
+
+export function parseFeedReply(raw) {
+  const rows = parseReply(raw);
+  const out = [];
+  for (const r of rows) {
+    const mount = String(r.mount || r.id || '').toLowerCase().replace(/^.*mount=/, '').replace(/[&?].*$/, '').replace(/\.pls$/, '').replace(/[^a-z0-9_.-]/g, '');
+    if (!mount) continue;
+    out.push({
+      mount,
+      airport: String(r.airport || mount.slice(0, 4)).toUpperCase().slice(0, 4),
+      label: String(r.label || r.name || '').trim(),
+      facility: FACILITY_CODES.includes(r.facility) ? r.facility : null,
+      freqs: Array.isArray(r.freqs || r.frequencies) ? (r.freqs || r.frequencies).map(String) : String(r.freqs || r.frequencies || '').split(/[,;\s]+/).filter(Boolean),
+      verified: r.verified !== false,
+    });
+  }
+  return out;
+}
